@@ -85,6 +85,9 @@ public sealed class BrowserViewModel : BaseViewModel
     // ── Entry point all'avvio ──────────────────────────────────────
     public Task InitializeAsync() => NavigateTo("pws://home");
 
+    /// <summary>Naviga ad un URI specifico (usato da codice esterno).</summary>
+    public Task NavigateToUri(string uri) => NavigateTo(uri);
+
     // ── Implementazioni comandi ────────────────────────────────────
     private async Task NavigateTo(string? url)
     {
@@ -170,4 +173,3 @@ public sealed class BrowserViewModel : BaseViewModel
         (StopCommand      as Command)?.ChangeCanExecute();
     }
 }
-

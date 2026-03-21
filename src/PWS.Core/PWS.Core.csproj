@@ -16,4 +16,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PWS.Format\PWS.Format.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PWS.App.Linux.Pages.StartupPage"
+             Title="PWS Browser"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <Grid RowDefinitions="*,Auto,*"
+          Padding="40">
+
+        <!-- Logo / Header -->
+        <VerticalStackLayout Grid.Row="1"
+                             Spacing="20"
+                             HorizontalOptions="Center">
+
+            <Label Text="🌐"
+                   FontSize="64"
+                   HorizontalOptions="Center" />
+
+            <Label Text="PWS Browser"
+                   FontSize="32"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Label Text="Seleziona un archivio .pws da aprire"
+                   FontSize="16"
+                   TextColor="{StaticResource SecondaryTextColor}"
+                   HorizontalOptions="Center"
+                   Margin="0,0,0,20" />
+
+            <!-- Pulsante Apri File -->
+            <Button Text="Apri file .pws"
+                    Clicked="OnOpenFileClicked"
+                    WidthRequest="200"
+                    HeightRequest="50"
+                    FontSize="16" />
+
+            <!-- Status message -->
+            <Label x:Name="StatusLabel"
+                   Text=""
+                   FontSize="14"
+                   TextColor="Red"
+                   HorizontalOptions="Center"
+                   Margin="0,10,0,0"
+                   IsVisible="False" />
+
+        </VerticalStackLayout>
+
+    </Grid>
+
+</ContentPage>
+

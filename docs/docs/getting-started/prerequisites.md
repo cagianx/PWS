@@ -49,6 +49,12 @@ sudo pacman -S webkitgtk-6.0   # gtk4 è già incluso in base
 non verrà renderizzata e l'applicazione potrebbe andare in crash all'avvio.
 :::
 
+:::tip GitHub Actions
+Il workflow CI del repository (`.github/workflows/ci.yml`) usa runner `ubuntu-24.04`
+e installa automaticamente questi pacchetti con `apt-get`, quindi non è necessario
+preconfigurare il runner oltre a `actions/setup-dotnet` e `actions/setup-node`.
+:::
+
 ## Node.js e pnpm (solo per la documentazione)
 
 La documentazione usa [Docusaurus](https://docusaurus.io) e richiede **Node.js ≥ 18** e **pnpm**.

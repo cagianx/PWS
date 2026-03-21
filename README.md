@@ -140,6 +140,29 @@ dotnet run --project src/PWS.App.Linux/PWS.App.Linux.csproj
 cd docs && pnpm install && pnpm build
 ```
 
+## Continuous Integration
+
+Il repository include una pipeline GitHub Actions in `.github/workflows/ci.yml`.
+
+La pipeline esegue tre job su `ubuntu-24.04`:
+
+1. **Build .NET projects**
+   - installa `libgtk-4-dev` e `libwebkitgtk-6.0-dev`
+   - esegue `dotnet restore PWS.slnx`
+   - esegue `dotnet build PWS.slnx --configuration Release`
+
+2. **Build Docusaurus docs**
+   - configura Node.js 20 + pnpm 9
+   - esegue `pnpm install --frozen-lockfile`
+   - esegue `pnpm build`
+
+3. **Test PWS.Format**
+   - scarica l'artifact `docs/build`
+   - esegue `dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj`
+
+In questo modo la CI verifica sia la compilazione dell'app Linux/GTK4 sia la build della documentazione
+e i test end-to-end del formato `.pws`.
+
 
 ---
 

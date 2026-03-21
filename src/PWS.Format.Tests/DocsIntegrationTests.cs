@@ -12,9 +12,9 @@ namespace PWS.Format.Tests;
 /// </summary>
 public sealed class DocsIntegrationTests
 {
-    private const string RepoRoot = "/data1/repo/PWS_MAUI";
-    private const string DocsBuildDir = RepoRoot + "/docs/build";
-    private const string DocsDir = RepoRoot + "/docs";
+    private static readonly string RepoRoot     = FindRepoRoot();
+    private static readonly string DocsBuildDir = Path.Combine(RepoRoot, "docs", "build");
+    private static readonly string DocsDir      = Path.Combine(RepoRoot, "docs");
 
     // ── Build della documentazione ───────────────────────────────────────────
 

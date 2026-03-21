@@ -47,11 +47,32 @@ pnpm start
 Prima di ogni commit verificare che **entrambi** i seguenti comandi abbiano esito positivo:
 
 ```bash
-# 1. C# — 0 errori
-dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj
+# 1. C# — 0 errori su tutti i progetti della solution
+dotnet build PWS.slnx
 
-# 2. Docusaurus — [SUCCESS]
+# 2. Test formato .pws
+dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj
+
+# 3. Docusaurus — [SUCCESS]
 cd docs && pnpm build
+```
+
+## GitHub Actions
+
+Il repository include il workflow `.github/workflows/ci.yml`, eseguito su push, pull request e manualmente.
+
+Job eseguiti in CI:
+
+```text
+build-dotnet  → dotnet restore/build PWS.slnx su ubuntu-24.04
+build-docs    → pnpm install --frozen-lockfile && pnpm build
+test-format   → dotnet test PWS.Format.Tests (incl. test runtime con docs/build)
+```
+
+Il job `build-dotnet` installa anche le dipendenze Linux richieste da GTK/WebKit:
+
+```bash
+sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 ```
 
 ## Struttura degli output

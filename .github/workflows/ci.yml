@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: 10.0.x
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build-dotnet:
+    name: Build .NET projects
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'PWS.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Install Linux system dependencies (GTK4 / WebKitGTK)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - name: Restore solution
+        run: dotnet restore PWS.slnx
+
+      - name: Build solution
+        run: dotnet build PWS.slnx --configuration $BUILD_CONFIGURATION --no-restore
+
+  build-docs:
+    name: Build Docusaurus docs
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install docs dependencies
+        working-directory: docs
+        run: pnpm install --frozen-lockfile
+
+      - name: Build docs
+        working-directory: docs
+        run: pnpm build
+
+      - name: Upload docs build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-build
+          path: docs/build
+          if-no-files-found: error
+
+  test-format:
+    name: Test PWS.Format
+    runs-on: ubuntu-24.04
+    needs:
+      - build-docs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'PWS.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Download docs build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-build
+          path: docs/build
+
+      - name: Test PWS.Format
+        run: dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj --configuration $BUILD_CONFIGURATION --logger "console;verbosity=normal"
+

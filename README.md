@@ -1,33 +1,82 @@
 # PWS Browser
 
-> **PWS** = **Portable WebSite** — un formato file (stile ZIP) che racchiude un intero
-> sito web statico in un singolo archivio portabile con estensione `.pws`.
+> **PWS** = **Portable WebSite** — incapsula l'output di build di un sito statico
+> (HTML/CSS/JS) in un **singolo file archivio** con estensione `.pws`, e lo rende
+> apribile con un lettore nativo desktop.
 
-Il browser PWS apre questi archivi e li renderizza tramite **WebView nativa GTK4**,
-senza mai estrarre file su disco.
+---
+
+## Il problema che risolve
+
+Un generatore di siti statici come **Docusaurus** produce una cartella `build/` con
+centinaia di file HTML/CSS/JS. Distribuire quella cartella è scomodo: bisogna zippare,
+estrarre, gestire path relativi, aprire un server locale.
+
+Con PWS:
+
+```
+pnpm build          →   docs/build/        (cartella con centinaia di file)
+pws pack build/     →   docs.pws           (un solo file, portabile)
+PWS Browser         →   apre docs.pws      (rendering nativo, zero server)
+```
+
+Un sito → un file. Come un `.epub` per i libri, ma per i siti statici.
 
 ---
 
 ## Cos'è un file `.pws`?
 
-Un `.pws` è un archivio ZIP rinominato con una struttura interna definita:
+Un `.pws` è un archivio ZIP con una struttura interna definita:
 
 ```
-archivio.pws
-├── manifest.json   ← entry point, titolo, versione
+docs.pws  (= ZIP)
+├── manifest.json      ← entry point, titolo, versione del sito
 ├── index.html
-├── css/
-├── js/
-└── img/
+├── assets/
+│   ├── css/main.css
+│   └── js/main.js
+└── docs/
+    ├── intro/index.html
+    └── ...
 ```
 
-| Formato | Contenuto |
-|---------|-----------|
-| `.epub` | libro elettronico (ZIP + HTML/CSS) |
-| `.docx` | documento Word (ZIP + XML) |
-| **`.pws`** | sito web portabile (ZIP + HTML/CSS/JS/asset) |
+Il `manifest.json` descrive il sito e indica la risorsa di ingresso:
 
-Un sito → un file. Portabile come un `.epub`, nessun server necessario.
+```json
+{
+  "title": "PWS Browser Docs",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}
+```
+
+---
+
+## Architettura del sistema
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  FASE 1 — Produzione del .pws                           │
+│                                                         │
+│  Docusaurus/Hugo/Next.js                                │
+│       pnpm build  →  build/                             │
+│       pws pack    →  site.pws          ← TODO           │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  FASE 2 — Lettura del .pws                              │
+│                                                         │
+│  PWS Browser (questa app)                               │
+│  FilePicker → apre site.pws                             │
+│       ↓                                                 │
+│  PwsFileContentProvider                ← TODO           │
+│  (legge ZIP in-memory, zero estrazione)                 │
+│       ↓                                                 │
+│  NavigationService + NavigationHistory                  │
+│       ↓                                                 │
+│  WebView GTK4 (WebKitGTK)                               │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -54,6 +103,7 @@ PWS_MAUI/
 │   │   ├── Navigation/    ← NavigationHistory, NavigationService
 │   │   └── Providers/     ← InMemoryContentProvider, ApiContentProvider,
 │   │                          CompositeContentProvider
+│   │                          [ PwsFileContentProvider — TODO ]
 │   └── PWS.App/           ← app MAUI GTK4
 │       ├── Program.cs     ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs ← DI builder
@@ -80,22 +130,7 @@ MSBuildEnableWorkloadResolver=false dotnet run --project src/PWS.App/PWS.App.csp
 cd docs && pnpm install && pnpm build
 ```
 
-> Aggiungere `export MSBuildEnableWorkloadResolver=false` al proprio shell profile
-> per non doverlo specificare ogni volta.
-
----
-
-## Come funziona
-
-```
-file.pws  →  PwsFileContentProvider  →  NavigationService  →  WebView GTK4
-              (legge dall'archivio        (gestisce history,     (renderizza HTML
-               ZIP in-memory)             back/forward)          senza toccare disco)
-```
-
-I link all'interno del sito vengono intercettati dalla `WebView.Navigating` e
-instradati al `NavigationService` — la WebView non naviga mai autonomamente verso
-URI custom (`pws://`).
+> Aggiungere `export MSBuildEnableWorkloadResolver=false` al proprio shell profile.
 
 ---
 
@@ -103,23 +138,24 @@ URI custom (`pws://`).
 
 | Componente | Stato |
 |-----------|-------|
-| `PWS.Core` — astrazioni e navigazione | ✅ Implementato |
-| `PWS.App` — UI browser GTK4 | ✅ Implementato |
-| `InMemoryContentProvider` (demo) | ✅ Implementato |
-| `ApiContentProvider` (http/api) | ✅ Implementato |
-| **`PwsFileContentProvider`** (archivio `.pws`) | 🔲 TODO |
-| Specifica formato `.pws` / manifest | 🔲 TODO |
-| Dialog apertura file (FilePicker) | 🔲 TODO |
-| Barra di progresso caricamento | 🔲 TODO |
-| Test unitari (`PWS.Core`) | 🔲 TODO |
+| `PWS.Core` — astrazioni e navigazione | ✅ |
+| `PWS.App` — UI browser GTK4 | ✅ |
+| `InMemoryContentProvider` (demo/dev) | ✅ |
+| `ApiContentProvider` (http/api) | ✅ |
+| Specifica formato `.pws` e `manifest.json` | 🔲 |
+| **`PwsFileContentProvider`** — legge ZIP in-memory | 🔲 |
+| **`pws pack`** — CLI packer (cartella → `.pws`) | 🔲 |
+| Dialog apertura file `.pws` (FilePicker) | 🔲 |
+| Barra di progresso caricamento | 🔲 |
+| Test unitari (`PWS.Core`) | 🔲 |
 
 ---
 
 ## Documentazione
 
-La documentazione completa è in [`docs/`](./docs) e include:
+La documentazione completa è in [`docs/`](./docs):
 
-- **Getting Started** — prerequisiti, build e avvio
+- **Getting Started** — prerequisiti, build, avvio
 - **Architettura** — panoramica, PWS.Core, PWS.App
 - **Content Providers** — `IContentProvider`, InMemory, Api, Composite
 

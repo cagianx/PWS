@@ -6,9 +6,26 @@
 un intero sito web statico (HTML, CSS, JS, asset) in un singolo archivio portabile con
 estensione `.pws`.
 
-Il browser PWS apre questi archivi e li renderizza tramite una `WebView` nativa
-**senza mai estrarre i file su disco**: tutto il contenuto viene servito in-memory
-dall'astrazione `IContentProvider`, che legge direttamente dall'archivio `.pws`.
+Il sistema è composto da due parti:
+
+1. **`pws pack`** (TODO) — CLI che prende la cartella `build/` di uno SSG (Docusaurus,
+   Hugo, Next.js, …) e la impacchetta in un `.pws` con un `manifest.json` di metadati
+2. **PWS Browser** (questa app) — lettore nativo GTK4 che apre i file `.pws`
+   e li renderizza tramite WebView **senza mai estrarre file su disco**
+
+### Flusso completo
+
+```
+Docusaurus/Hugo/...
+  └─ pnpm build  →  build/           (cartella con centinaia di file)
+  └─ pws pack    →  docs.pws         (un solo file archivio ZIP)
+
+PWS Browser
+  └─ FilePicker  →  apre docs.pws
+  └─ PwsFileContentProvider          (legge ZIP in-memory)
+  └─ NavigationService
+  └─ WebView GTK4                    (renderizza, zero server)
+```
 
 ### Analogia
 | Formato | Contenuto |
@@ -180,6 +197,7 @@ sudo dnf install gtk4-devel webkitgtk6.0-devel
 
 - [ ] Definire la specifica del formato `.pws` (struttura archivio, manifest)
 - [ ] Implementare `PwsFileContentProvider` — legge risorse dall'archivio `.pws`
+- [ ] Implementare `pws pack` — CLI che impacchetta `build/` → `.pws`
 - [ ] Aggiungere `ApiContentProvider` al `CompositeContentProvider` in `MauiProgram.cs`
 - [ ] Gestire `http://` e `https://` attraverso `ApiContentProvider` nella `WebView`
 - [ ] Dialog di apertura file `.pws` (via MAUI Essentials `FilePicker`)

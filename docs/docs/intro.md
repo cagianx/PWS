@@ -5,13 +5,28 @@ slug: /intro
 
 # Introduzione a PWS Browser
 
-**PWS** sta per **Portable WebSite**: un formato file (simile a uno ZIP) che racchiude
-un intero sito web statico — HTML, CSS, JavaScript, immagini e tutti gli asset — in un
+**PWS** sta per **Portable WebSite**: un formato file che incapsula l'**output di build
+di un sito statico** — prodotto da Docusaurus, Hugo, Next.js, ecc. — in un
 **singolo archivio portabile** con estensione `.pws`.
 
-Il browser PWS apre questi archivi e li renderizza tramite la `WebView` nativa
-**senza mai estrarre i file su disco**: il contenuto viene servito completamente
-in-memory dall'astrazione `IContentProvider`.
+## Il problema che risolve
+
+Un generatore di siti statici come **Docusaurus** produce una cartella `build/` con
+centinaia di file HTML/CSS/JS. Distribuire quella cartella è scomodo:
+
+- bisogna zippare, estrarre, gestire path relativi
+- aprire un server locale solo per visualizzarla
+- inviare un archivio da spacchettare ogni volta
+
+Con PWS il flusso diventa:
+
+```
+pnpm build       →   docs/build/      (centinaia di file)
+pws pack build/  →   docs.pws         (un solo file portabile)
+PWS Browser      →   apre docs.pws    (rendering nativo, zero server)
+```
+
+**Un sito → un file.** Come un `.epub` per i libri, ma per i siti statici.
 
 ## Analogia con altri formati
 
@@ -21,40 +36,43 @@ in-memory dall'astrazione `IContentProvider`.
 | `.docx` | documento Word (ZIP + XML) |
 | **`.pws`** | sito web portabile (ZIP + HTML/CSS/JS/asset) |
 
-Il concetto è lo stesso: un archivio compresso con una struttura interna definita,
-che un'applicazione dedicata sa come aprire e presentare all'utente.
+Il concetto è identico: un archivio ZIP con una struttura interna definita, che
+un'applicazione dedicata sa come aprire e presentare.
 
-## Perché non aprire i file direttamente?
+## Il formato `.pws`
 
-Aprire i file di un sito web direttamente dal filesystem crea diversi problemi:
-
-- **Sicurezza**: la WebView avrebbe accesso libero al disco
-- **Portabilità**: i path assoluti si rompono spostandosi tra macchine
-- **Atomicità**: un sito è composto da decine/centinaia di file; un `.pws` è un file solo
-
-Con il formato `.pws` il sito è un **singolo file portabile**: si copia, si condivide,
-si apre — esattamente come si farebbe con un `.epub` o un `.pdf`.
-
-## Come funziona internamente
-
-La WebView non sa nulla del formato `.pws`. L'archivio viene aperto una volta sola,
-e ogni richiesta di risorsa (pagina, immagine, script, font…) viene intercettata e
-servita dal `IContentProvider` senza mai scrivere nulla su disco:
+Un `.pws` è un archivio ZIP con un `manifest.json` all'interno:
 
 ```
-file.pws (archivio ZIP)
-  ├── manifest.json        ← metadati del sito (entry point, titolo, versione)
-  ├── index.html
-  ├── css/style.css
-  ├── js/app.js
-  └── img/logo.png
-        │
-        ▼ (tutto in-memory, mai su disco)
-  PwsFileContentProvider  ←── serve le risorse all'interno dell'archivio
-        │
-        ▼
-  WebView (GTK4 / WebKitGTK)
+docs.pws
+├── manifest.json      ← metadati (entry point, titolo, versione)
+├── index.html
+├── assets/
+│   ├── css/main.css
+│   └── js/main.js
+└── docs/
+    ├── intro/index.html
+    └── ...
 ```
+
+Il manifest indica al browser come aprire il sito:
+
+```json
+{
+  "title": "La mia documentazione",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}
+```
+
+## Le due parti del sistema
+
+**1 — `pws pack`** (TODO): uno strumento CLI che prende la cartella `build/` di uno
+SSG e la impacchetta in un file `.pws`.
+
+**2 — PWS Browser** (questa app): legge il file `.pws` e lo renderizza via
+`WebView GTK4` senza mai estrarre nulla su disco — ogni risorsa viene servita
+in-memory da `PwsFileContentProvider`.
 
 ## Stack tecnologico
 
@@ -65,19 +83,6 @@ file.pws (archivio ZIP)
 | WebView | WebKitGTK (via GTK4) |
 | Target | Linux nativo (net10.0) |
 | Documentazione | Docusaurus 3, TypeScript, pnpm |
-
-## Struttura del repository
-
-```
-PWS_MAUI/
-├── src/
-│   ├── PWS.Core/     ← logica pura, zero dipendenze MAUI
-│   └── PWS.App/      ← applicazione MAUI GTK4
-├── docs/             ← questa documentazione
-├── CLAUDE.md         ← istruzioni per Claude AI
-└── .github/
-    └── copilot-instructions.md
-```
 
 ## Prossimi passi
 

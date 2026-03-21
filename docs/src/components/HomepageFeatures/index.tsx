@@ -11,13 +11,13 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Formato Portable WebSite',
+    title: 'SSG → .pws → browser',
     emoji: '📦',
     description: (
       <>
-        Un file <code>.pws</code> è un archivio ZIP che contiene un intero sito web
-        statico (HTML, CSS, JS, asset). Un sito = un file — portabile come un{' '}
-        <code>.epub</code> o un <code>.docx</code>.
+        <code>pws pack build/</code> impacchetta l'output di Docusaurus, Hugo o
+        Next.js in un singolo file <code>.pws</code>. PWS Browser lo apre e lo
+        renderizza — nessun server, nessuna estrazione su disco.
       </>
     ),
   },
@@ -26,9 +26,9 @@ const FeatureList: FeatureItem[] = [
     emoji: '🔒',
     description: (
       <>
-        La WebView non tocca mai il filesystem. Ogni risorsa viene servita
-        direttamente dall'archivio in-memory tramite <code>IContentProvider</code>,
-        senza file temporanei e senza accesso libero al disco.
+        Ogni risorsa (HTML, CSS, JS, immagini) viene servita direttamente
+        dall'archivio ZIP in-memory tramite <code>IContentProvider</code>.
+        La WebView non ha accesso diretto al filesystem.
       </>
     ),
   },

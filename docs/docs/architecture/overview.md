@@ -6,22 +6,23 @@ sidebar_position: 1
 
 PWS è diviso in due layer nettamente separati: **PWS.Core** (logica pura) e **PWS.App** (UI MAUI).
 
-## Contesto: il formato `.pws`
+## Contesto: dal build al browser
 
-Un file `.pws` è un archivio ZIP con una struttura interna definita:
+Il flusso completo del sistema PWS è diviso in due fasi:
 
 ```
-archivio.pws  (= ZIP rinominato)
-├── manifest.json   ← entry point, titolo, versione del sito
-├── index.html
-├── css/
-├── js/
-└── img/
-```
+FASE 1 — Produzione
+  Docusaurus / Hugo / Next.js
+    pnpm build  →  build/       (centinaia di file HTML/CSS/JS)
+    pws pack    →  site.pws     (un solo archivio ZIP — TODO)
 
-Il browser riceve il path di un `.pws`, lo apre **una sola volta** in-memory e poi
-serve ogni risorsa richiesta dalla WebView tramite `IContentProvider` — senza mai
-estrarre nulla su disco.
+FASE 2 — Lettura
+  PWS Browser
+    FilePicker        →  apre site.pws
+    PwsFileProvider   →  legge dal ZIP in-memory (TODO)
+    NavigationService →  gestisce history / back / forward
+    WebView GTK4      →  renderizza HTML senza toccare disco
+```
 
 ## Diagramma
 

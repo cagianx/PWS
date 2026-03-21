@@ -67,10 +67,10 @@ Il `manifest.json` descrive il sito e indica la risorsa di ingresso:
 │  FASE 2 — Lettura del .pws                              │
 │                                                         │
 │  PWS Browser (questa app)                               │
-│  FilePicker → apre site.pws                             │
+│  Gtk.FileDialog → apre site.pws                         │
 │       ↓                                                 │
-│  PwsFileContentProvider                ← TODO           │
-│  (legge ZIP in-memory, zero estrazione)                 │
+│  PwsContentProvider                                     │
+│  (mantiene PwsReader aperto in-memory, zero estrazione) │
 │       ↓                                                 │
 │  NavigationService + NavigationHistory                  │
 │       ↓                                                 │
@@ -113,7 +113,8 @@ PWS_MAUI/
 │   └── PWS.App.Linux/     ← app MAUI GTK4 (Linux-only, net10.0)
 │       ├── Program.cs     ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs ← DI builder
-│       ├── Pages/         ← BrowserPage (WebView + toolbar + status bar)
+│       ├── Pages/         ← StartupPage (chooser GTK) + BrowserPage
+│       ├── Services/      ← PwsFileService, GtkPwsArchivePicker
 │       └── ViewModels/    ← BrowserViewModel
 └── docs/                  ← documentazione Docusaurus
 ```
@@ -152,9 +153,9 @@ cd docs && pnpm install && pnpm build
 | `InMemoryContentProvider` (demo/dev) | ✅ |
 | `ApiContentProvider` (http/api) | ✅ |
 | Specifica formato `.pws` e `manifest.json` | ✅ |
-| **`PwsFileContentProvider`** — bridge Format→Core | 🔲 |
+| `PwsContentProvider` — bridge Format→Core | ✅ |
 | **`pws pack`** — CLI packer (cartella → `.pws`) | 🔲 |
-| Dialog apertura file `.pws` (FilePicker) | 🔲 |
+| Dialog apertura file `.pws` (GTK native chooser) | ✅ |
 | Barra di progresso caricamento | 🔲 |
 | Test unitari (`PWS.Core`, `PWS.Format`) | 🔲 |
 

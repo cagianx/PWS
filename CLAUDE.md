@@ -40,8 +40,13 @@ PWS_MAUI/
 - Progetto **separato** dedicato a Linux: le dipendenze native GTK4 non inquinano altri target
 - `Program.cs`        → entry point `GtkMauiApplication`
 - `MauiProgram.cs`    → DI builder con `UseMauiAppLinuxGtk4<App>`
+- `Pages/StartupPage` → chooser nativo `Gtk.FileDialog` per aprire `.pws`
 - `Pages/BrowserPage` → WebView + toolbar + status bar
+- `Services/PwsFileService` → mantiene il `PwsContentProvider` corrente
 - `ViewModels/BrowserViewModel` → comandi nav, `HtmlContent`, `AddressText`
+
+**Flusso apertura `.pws`**: `StartupPage` → `Gtk.FileDialog` → `PwsReader.OpenAsync(path)`
+→ `PwsFileService.SetProvider(new PwsContentProvider(reader))` → `BrowserViewModel.NavigateToUri("pack://...")`
 
 **Flusso link custom**: `WebView.Navigating` → `e.Cancel = true` → `BrowserViewModel.NavigateCommand`
 → `NavigationService` → `IContentProvider` → `HtmlWebViewSource`

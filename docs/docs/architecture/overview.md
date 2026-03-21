@@ -18,8 +18,8 @@ FASE 1 — Produzione
 
 FASE 2 — Lettura
   PWS Browser
-    FilePicker        →  apre site.pws
-    PwsFileProvider   →  legge dal ZIP in-memory (TODO)
+    Gtk.FileDialog    →  apre site.pws
+    PwsContentProvider→  legge dal .pws in-memory
     NavigationService →  gestisce history / back / forward
     WebView GTK4      →  renderizza HTML senza toccare disco
 ```
@@ -66,7 +66,8 @@ Il flusso completo quando l'utente apre `archivio.pws` e clicca un link interno:
 
 ```
 1. Apertura file
-   FilePicker → path del .pws → PwsFileContentProvider.Open(path)
+   StartupPage → Gtk.FileDialog → PwsReader.OpenAsync(path)
+   → PwsFileService.SetProvider(new PwsContentProvider(reader))
    (l'archivio rimane aperto in-memory per tutta la sessione)
 
 2. WebView.Navigating (evento MAUI) — es. link a "pws://about"
@@ -74,8 +75,8 @@ Il flusso completo quando l'utente apre `archivio.pws` e clicca un link interno:
    └─ BrowserViewModel.NavigateCommand.Execute("pws://about")
 
 3. NavigationService.NavigateAsync(uri)
-   └─ CompositeContentProvider → PwsFileContentProvider.GetAsync(request)
-   └─ legge "about.html" dall'archivio ZIP (ZipArchive.GetEntry)
+   └─ DynamicCompositeContentProvider → PwsContentProvider.GetAsync(request)
+   └─ legge "index.html" dal filesystem virtuale del .pws
    └─ ContentResponse { Stream = <contenuto della entry> }
 
 4. NavigationService.Navigated evento

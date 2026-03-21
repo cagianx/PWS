@@ -21,6 +21,7 @@ public static class MauiProgram
         // ── Services ────────────────────────────────────────────────
         // Servizio che mantiene il PwsContentProvider corrente
         builder.Services.AddSingleton<PwsFileService>();
+        builder.Services.AddSingleton<IPwsArchivePicker, GtkPwsArchivePicker>();
 
         // ── Core (PWS.Core) ─────────────────────────────────────────
         // Provider in-memory per schema pws://

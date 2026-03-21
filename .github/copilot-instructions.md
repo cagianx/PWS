@@ -25,11 +25,15 @@ PWS.slnx
 │   └── PWS.App.Linux/      ← app MAUI GTK4 (Linux-only, net10.0)
 │       ├── Program.cs      ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs  ← DI builder (UseMauiAppLinuxGtk4<App>)
-│       ├── App.xaml/.cs    ← Application root, imposta MainPage = new AppShell()
-│       ├── AppShell.xaml   ← Shell con route "browser" → BrowserPage
+│       ├── App.xaml/.cs    ← Application root, imposta MainPage = new NavigationPage(new StartupPage())
 │       ├── Pages/
+│       │   ├── StartupPage.xaml      ← UI: chooser GTK nativo per aprire `.pws`
 │       │   ├── BrowserPage.xaml      ← UI: toolbar + WebView + status bar
 │       │   └── BrowserPage.xaml.cs   ← code-behind: VM da DI, sync WebView
+│       ├── Services/
+│       │   ├── IPwsArchivePicker.cs  ← astrazione chooser archivio
+│       │   ├── GtkPwsArchivePicker.cs← `Gtk.FileDialog` nativo Linux
+│       │   └── PwsFileService.cs     ← mantiene il provider `.pws` corrente
 │       ├── ViewModels/
 │       │   ├── BaseViewModel.cs      ← INotifyPropertyChanged helper
 │       │   └── BrowserViewModel.cs   ← comandi nav, AddressText, HtmlContent
@@ -53,6 +57,8 @@ PWS.slnx
 ### PWS.App.Linux
 - Progetto **separato** dedicato a Linux: `Platform.Maui.Linux.Gtk4` porta dipendenze
   native GTK4 che non devono inquinare build su altri OS.
+- Per scegliere un archivio `.pws`, usare un servizio GTK nativo (`Gtk.FileDialog`) invece di
+  `Microsoft.Maui.Storage.FilePicker`, che sul backend Linux/GTK può non essere implementato.
 - `BrowserViewModel` non dipende da MAUI Controls: usa solo `ICommand` e `INotifyPropertyChanged`.
 - `BrowserPage.xaml.cs` è l'unico punto in cui si tocca la `WebView` MAUI.
 - Il ViewModel risolto tramite `IPlatformApplication.Current!.Services.GetRequiredService<T>()`:

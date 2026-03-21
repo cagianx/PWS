@@ -21,10 +21,14 @@ PWS.App.Linux/
 ├── Program.cs          ← entry point GtkMauiApplication
 ├── MauiProgram.cs      ← DI builder
 ├── App.xaml/.cs        ← Application root
-├── AppShell.xaml/.cs   ← Shell con route "browser"
 ├── Pages/
+│   ├── StartupPage.xaml      ← chooser GTK nativo per aprire file .pws
 │   ├── BrowserPage.xaml      ← UI: toolbar + WebView + status bar
 │   └── BrowserPage.xaml.cs   ← code-behind
+├── Services/
+│   ├── IPwsArchivePicker.cs   ← astrazione chooser archivio
+│   ├── GtkPwsArchivePicker.cs ← Gtk.FileDialog nativo Linux
+│   └── PwsFileService.cs      ← mantiene il PwsContentProvider corrente
 └── ViewModels/
     ├── BaseViewModel.cs       ← INotifyPropertyChanged helper
     └── BrowserViewModel.cs    ← stato e comandi del browser
@@ -48,19 +52,44 @@ public class Program : GtkMauiApplication
 ## MauiProgram.cs — Dependency Injection
 
 ```csharp
+builder.Services.AddSingleton<PwsFileService>();
+builder.Services.AddSingleton<IPwsArchivePicker, GtkPwsArchivePicker>();
+
 builder.Services.AddSingleton<InMemoryContentProvider>(_ =>
     new InMemoryContentProvider("pws"));
 
 builder.Services.AddSingleton<IContentProvider>(sp =>
-    new CompositeContentProvider([
-        sp.GetRequiredService<InMemoryContentProvider>()
-    ]));
+    new DynamicCompositeContentProvider(
+        sp.GetRequiredService<InMemoryContentProvider>(),
+        sp.GetRequiredService<PwsFileService>()));
 
 builder.Services.AddSingleton<INavigationService, NavigationService>();
 builder.Services.AddTransient<BrowserViewModel>();
 ```
 
-Per aggiungere un nuovo provider, registrarlo e aggiungerlo al `CompositeContentProvider`.
+Il provider composito include sempre `pws://` in-memory e, quando l'utente apre un archivio,
+delegata anche al `PwsContentProvider` corrente esposto da `PwsFileService`.
+
+## StartupPage — Apertura archivio .pws
+
+All'avvio l'app mostra una `StartupPage` con un pulsante **Apri file .pws**.
+
+Su Linux/GTK il progetto usa un servizio dedicato `IPwsArchivePicker` implementato da
+`GtkPwsArchivePicker`, che apre un dialog nativo `Gtk.FileDialog`.
+
+> Non si usa `Microsoft.Maui.Storage.FilePicker` perché sul backend Linux/GTK può ricadere
+> nella versione portable dell'assembly e lanciare `NotImplementedInReferenceAssemblyException`.
+
+Flusso:
+
+```csharp
+var path = await archivePicker.PickAsync();
+var reader = await PwsReader.OpenAsync(path);
+var provider = new PwsContentProvider(reader, defaultSiteId);
+pwsFileService.SetProvider(provider);
+```
+
+Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
 
 ## BrowserViewModel
 
@@ -102,7 +131,7 @@ il service-locator pattern.
 private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
 {
     if (e.PropertyName == nameof(BrowserViewModel.HtmlContent))
-        MainThread.BeginInvokeOnMainThread(() =>
+        Dispatcher.Dispatch(() =>
             BrowserWebView.Source = new HtmlWebViewSource { Html = vm.HtmlContent });
 }
 ```

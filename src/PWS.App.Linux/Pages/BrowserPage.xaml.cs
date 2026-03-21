@@ -39,7 +39,9 @@ public partial class BrowserPage : ContentPage
         if (!_initialLoadDone)
         {
             _initialLoadDone = true;
-            if (BindingContext is BrowserViewModel vm)
+            if (BindingContext is BrowserViewModel vm
+                && string.IsNullOrWhiteSpace(vm.HtmlContent)
+                && string.Equals(vm.AddressText, "pws://home", StringComparison.OrdinalIgnoreCase))
                 await vm.InitializeAsync();
         }
     }

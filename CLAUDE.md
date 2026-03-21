@@ -17,6 +17,7 @@ tutto passa attraverso l'astrazione `IContentProvider`.
 PWS_MAUI/
 ├── src/
 │   ├── PWS.Core/        ← libreria portable net10.0, ZERO dipendenze MAUI
+│   ├── PWS.Format/      ← libreria formato .pws net10.0, ZERO NuGet aggiuntivi
 │   └── PWS.App.Linux/   ← app MAUI GTK4 net10.0 (Linux-only)
 ├── docs/                ← documentazione Docusaurus (TypeScript, pnpm)
 └── CLAUDE.md
@@ -27,6 +28,13 @@ PWS_MAUI/
 - `Models/`       → `ContentRequest`, `ContentResponse` (usa `Stream`, è `IDisposable`), `NavigationEntry`
 - `Navigation/`   → `NavigationHistory`, `NavigationService`
 - `Providers/`    → `InMemoryContentProvider` (pws://), `ApiContentProvider` (http/https/api://), `CompositeContentProvider`
+
+### PWS.Format (nessuna dipendenza MAUI, zero NuGet extra)
+- `Manifest/`    → `PwsManifest`, `SiteManifest`
+- `Crypto/`      → JWT BCL-only: `IPwsSigningKey`, `PwsSigningKey` (factory), `NoneKey`, `HmacKey`, `EcDsaKey`, `MerkleHasher`, `SiteClaims`
+- `Filesystem/`  → `IPwsFileSystem`, `PwsFileEntry`, `PwsFileSystem` (internal)
+- `Packing/`     → `PwsPacker`, `PwsPackOptions`, `PwsSiteSource`
+- `Reading/`     → `PwsReader`, `PwsOpenOptions`
 
 ### PWS.App.Linux (MAUI GTK4 — Linux)
 - Progetto **separato** dedicato a Linux: le dipendenze native GTK4 non inquinano altri target

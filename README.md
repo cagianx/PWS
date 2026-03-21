@@ -103,7 +103,13 @@ PWS_MAUI/
 │   │   ├── Navigation/    ← NavigationHistory, NavigationService
 │   │   └── Providers/     ← InMemoryContentProvider, ApiContentProvider,
 │   │                          CompositeContentProvider
-│   │                          [ PwsFileContentProvider — TODO ]
+│   ├── PWS.Format/        ← libreria formato .pws (net10.0, zero NuGet extra)
+│   │   ├── Manifest/      ← PwsManifest, SiteManifest
+│   │   ├── Crypto/        ← JWT BCL-only, MerkleHasher, IPwsSigningKey
+│   │   │                     NoneKey · HmacKey · EcDsaKey · PwsSigningKey
+│   │   ├── Filesystem/    ← IPwsFileSystem, PwsFileEntry
+│   │   ├── Packing/       ← PwsPacker, PwsPackOptions, PwsSiteSource
+│   │   └── Reading/       ← PwsReader, PwsOpenOptions
 │   └── PWS.App.Linux/     ← app MAUI GTK4 (Linux-only, net10.0)
 │       ├── Program.cs     ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs ← DI builder
@@ -142,14 +148,15 @@ cd docs && pnpm install && pnpm build
 |-----------|-------|
 | `PWS.Core` — astrazioni e navigazione | ✅ |
 | `PWS.App.Linux` — UI browser GTK4 | ✅ |
+| `PWS.Format` — manifest, packer, reader, JWT | ✅ |
 | `InMemoryContentProvider` (demo/dev) | ✅ |
 | `ApiContentProvider` (http/api) | ✅ |
-| Specifica formato `.pws` e `manifest.json` | 🔲 |
-| **`PwsFileContentProvider`** — legge ZIP in-memory | 🔲 |
+| Specifica formato `.pws` e `manifest.json` | ✅ |
+| **`PwsFileContentProvider`** — bridge Format→Core | 🔲 |
 | **`pws pack`** — CLI packer (cartella → `.pws`) | 🔲 |
 | Dialog apertura file `.pws` (FilePicker) | 🔲 |
 | Barra di progresso caricamento | 🔲 |
-| Test unitari (`PWS.Core`) | 🔲 |
+| Test unitari (`PWS.Core`, `PWS.Format`) | 🔲 |
 
 ---
 

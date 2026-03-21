@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PWS.Format</RootNamespace>
+    <AssemblyName>PWS.Format</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!--
+      Zero dipendenze NuGet: JWT BCL-only (HMACSHA256, ECDsa, SHA256),
+      ZIP via System.IO.Compression, JSON via System.Text.Json.
+      Nessuna dipendenza MAUI — usabile anche da CLI/test.
+    -->
+  </PropertyGroup>
+
+</Project>
+

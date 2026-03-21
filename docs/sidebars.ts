@@ -22,6 +22,15 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: '📦 Formato .pws',
+      items: [
+        'format/overview',
+        'format/packer',
+        'format/reader',
+      ],
+    },
+    {
+      type: 'category',
       label: '🔌 Content Providers',
       items: [
         'providers/interface',

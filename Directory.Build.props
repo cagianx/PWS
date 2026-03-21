@@ -1,0 +1,21 @@
+<Project>
+  <!--
+    Disabilita il workload resolver di MSBuild.
+
+    Il workload MAUI tradizionale è broken su .NET 10; Platform.Maui.Linux.Gtk4
+    porta con sé tutto il necessario via NuGet senza bisogno del workload.
+
+    Questo file viene importato automaticamente da MSBuild prima di qualsiasi
+    .csproj, quindi vale sia per le build da CLI sia per il caricamento del
+    progetto da Rider — eliminando il fallback su Mono che causa l'errore
+    "Mono is required to load 'PWS.App'".
+
+    Equivalente a impostare la env var:
+      export MSBuildEnableWorkloadResolver=false
+    ma funziona anche senza modificare il profilo di shell o Rider.
+  -->
+  <PropertyGroup>
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
+  </PropertyGroup>
+</Project>
+

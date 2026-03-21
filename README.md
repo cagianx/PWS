@@ -120,17 +120,16 @@ PWS_MAUI/
 # Prerequisiti di sistema (Debian/Ubuntu)
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 
-# C# — build
-MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj
+# C# — build  (MSBuildEnableWorkloadResolver=false è in Directory.Build.props)
+dotnet build src/PWS.App/PWS.App.csproj
 
 # C# — avvio
-MSBuildEnableWorkloadResolver=false dotnet run --project src/PWS.App/PWS.App.csproj
+dotnet run --project src/PWS.App/PWS.App.csproj
 
 # Documentazione
 cd docs && pnpm install && pnpm build
 ```
 
-> Aggiungere `export MSBuildEnableWorkloadResolver=false` al proprio shell profile.
 
 ---
 

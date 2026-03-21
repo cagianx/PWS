@@ -95,7 +95,7 @@ sco## Regola fondamentale — Prima di ogni commit
 
 **Ogni volta che apporti modifiche, PRIMA del commit devi:**
 
-1. ✅ Verificare che il C# compili: `MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
+1. ✅ Verificare che il C# compili: `dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
 2. ✅ Verificare che Docusaurus compili: `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Aggiornare la documentazione in `docs/` riflettendo le modifiche apportate
 4. ✅ Usare il formato **Conventional Commits** per il messaggio
@@ -147,8 +147,8 @@ chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
 ## Come buildare
 
 ```bash
-# .NET / C#  (senza il workload MAUI tradizionale, che è rotto su net10.0)
-MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj
+# .NET / C#  (MSBuildEnableWorkloadResolver=false è in Directory.Build.props)
+dotnet build src/PWS.App/PWS.App.csproj
 
 # Docusaurus (sviluppo)
 cd docs && npm run start
@@ -157,8 +157,6 @@ cd docs && npm run start
 cd docs && npm run build
 ```
 
-> **Variabile d'ambiente consigliata** nel proprio shell profile:
-> `export MSBuildEnableWorkloadResolver=false`
 
 ---
 

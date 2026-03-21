@@ -76,8 +76,8 @@ PWS_MAUI/
 ## Comandi di build
 
 ```bash
-# C# — usa SEMPRE questa variabile (workload MAUI rotto su net10.0)
-MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj
+# C# — MSBuildEnableWorkloadResolver=false è in Directory.Build.props (automatico)
+dotnet build src/PWS.App/PWS.App.csproj
 
 # Docs — sviluppo
 cd docs && pnpm start
@@ -86,13 +86,12 @@ cd docs && pnpm start
 cd docs && pnpm build
 ```
 
-> Aggiungi `export MSBuildEnableWorkloadResolver=false` al tuo shell profile.
 
 ---
 
 ## Regola fondamentale — Prima di ogni commit
 
-1. ✅ `MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
+1. ✅ `dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
 2. ✅ `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Documentazione aggiornata con le modifiche apportate
 4. ✅ Messaggio di commit in formato **Conventional Commits**

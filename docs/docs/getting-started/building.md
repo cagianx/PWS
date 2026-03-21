@@ -8,7 +8,8 @@ sidebar_position: 2
 
 ```bash
 # Dalla root del repository
-MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj
+# (MSBuildEnableWorkloadResolver=false è già in Directory.Build.props)
+dotnet build src/PWS.App/PWS.App.csproj
 ```
 
 Output atteso:
@@ -21,7 +22,7 @@ Compilazione completata.
 ### Avviare l'applicazione
 
 ```bash
-MSBuildEnableWorkloadResolver=false dotnet run --project src/PWS.App/PWS.App.csproj
+dotnet run --project src/PWS.App/PWS.App.csproj
 ```
 
 All'avvio si aprirà una finestra GTK4 con il browser che naviga automaticamente su `pws://home`.
@@ -47,7 +48,7 @@ Prima di ogni commit verificare che **entrambi** i seguenti comandi abbiano esit
 
 ```bash
 # 1. C# — 0 errori
-MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj
+dotnet build src/PWS.App/PWS.App.csproj
 
 # 2. Docusaurus — [SUCCESS]
 cd docs && pnpm build

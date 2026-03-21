@@ -16,15 +16,15 @@ dotnet --version   # deve mostrare 10.x.x
 
 Scaricare da [https://dotnet.microsoft.com/download](https://dotnet.microsoft.com/download).
 
-:::warning Workload MAUI
+:::warning Workload MAUI e Mono
 Il workload MAUI tradizionale (`dotnet workload install maui`) **non è necessario** e
 su .NET 10 risulta spesso rotto. PWS usa il pacchetto NuGet
 `Platform.Maui.Linux.Gtk4` che porta con sé tutto il necessario.
 
-Aggiungere al proprio shell profile per evitare errori di resolver:
-```bash
-export MSBuildEnableWorkloadResolver=false
-```
+Il progetto include un `Directory.Build.props` alla root che imposta
+`MSBuildEnableWorkloadResolver=false` automaticamente — non serve né
+installare Mono né aggiungere variabili d'ambiente al profilo di shell.
+Il semplice `dotnet build` funziona senza configurazione aggiuntiva.
 :::
 
 ## Librerie di sistema GTK4

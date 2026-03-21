@@ -144,24 +144,42 @@ cd docs && pnpm install && pnpm build
 
 Il repository include una pipeline GitHub Actions in `.github/workflows/ci.yml`.
 
-La pipeline esegue tre job su `ubuntu-24.04`:
+La pipeline esegue quattro job su `ubuntu-24.04`:
 
 1. **Build .NET projects**
    - installa `libgtk-4-dev` e `libwebkitgtk-6.0-dev`
    - esegue `dotnet restore PWS.slnx`
    - esegue `dotnet build PWS.slnx --configuration Release`
+   - pubblica l'artifact scaricabile `pws-app-linux-build`
 
 2. **Build Docusaurus docs**
+   - configura `pnpm` **prima** di `setup-node` (necessario per il cache provider)
    - configura Node.js 20 + pnpm 9
    - esegue `pnpm install --frozen-lockfile`
    - esegue `pnpm build`
+   - pubblica l'artifact scaricabile `docs-build`
 
-3. **Test PWS.Format**
+3. **Package docs as .pws**
+   - scarica l'artifact `docs-build`
+   - esegue `dotnet run --project src/CreateTestPws/CreateTestPws.csproj -- docs/build artifacts/docs.pws`
+   - pubblica l'artifact scaricabile `docs-pws`
+
+4. **Test PWS.Format**
    - scarica l'artifact `docs/build`
    - esegue `dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj`
+   - pubblica l'artifact scaricabile `pws-format-test-results`
 
 In questo modo la CI verifica sia la compilazione dell'app Linux/GTK4 sia la build della documentazione
 e i test end-to-end del formato `.pws`.
+
+### Artifact scaricabili dalla UI GitHub
+
+Dalla pagina del workflow GitHub Actions è possibile scaricare:
+
+- `pws-app-linux-build` → output compilato dell'app Linux e del tool `CreateTestPws`
+- `docs-build` → sito Docusaurus statico generato in `docs/build/`
+- `docs-pws` → archivio `.pws` della documentazione
+- `pws-format-test-results` → risultati test in formato `.trx`
 
 
 ---

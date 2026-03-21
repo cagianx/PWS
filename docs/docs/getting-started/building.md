@@ -66,14 +66,29 @@ Job eseguiti in CI:
 ```text
 build-dotnet  → dotnet restore/build PWS.slnx su ubuntu-24.04
 build-docs    → pnpm install --frozen-lockfile && pnpm build
+package-docs-pws → dotnet run CreateTestPws su docs/build e genera docs.pws
 test-format   → dotnet test PWS.Format.Tests (incl. test runtime con docs/build)
 ```
+
+> Nota: nel workflow GitHub Actions `pnpm` viene configurato **prima** di `actions/setup-node`,
+> altrimenti il runner non trova l'eseguibile e fallisce con `Unable to locate executable file: pnpm`.
 
 Il job `build-dotnet` installa anche le dipendenze Linux richieste da GTK/WebKit:
 
 ```bash
 sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 ```
+
+## Artifact scaricabili da GitHub UI
+
+Alla fine del workflow puoi scaricare questi artifact dalla pagina della run:
+
+| Artifact | Contenuto |
+|----------|-----------|
+| `pws-app-linux-build` | output Release dell'app Linux e del tool `CreateTestPws` |
+| `docs-build` | sito Docusaurus statico (`docs/build/`) |
+| `docs-pws` | archivio `.pws` generato dalla documentazione |
+| `pws-format-test-results` | risultati test `.trx` |
 
 ## Struttura degli output
 

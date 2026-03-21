@@ -1,15 +1,29 @@
 using PWS.Format.Crypto;
 using PWS.Format.Packing;
 
-// Crea un .pws con la documentazione buildata
-var docsDir = Path.Combine(FindRepoRoot(), "docs", "build");
+// Usage:
+//   dotnet run --project src/CreateTestPws/CreateTestPws.csproj -- [inputDir] [outputPath]
+// Defaults:
+//   inputDir   = <repo>/docs/build
+//   outputPath = <repo>/artifacts/docs.pws
+
+var repoRoot = FindRepoRoot();
+var docsDir = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
+    ? Path.GetFullPath(args[0], Directory.GetCurrentDirectory())
+    : Path.Combine(repoRoot, "docs", "build");
+
 if (!Directory.Exists(docsDir))
 {
     Console.WriteLine($"❌ Directory not found: {docsDir}");
     return 1;
 }
 
-var outputPath = "/tmp/docs.pws";
+var outputPath = args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
+    ? Path.GetFullPath(args[1], Directory.GetCurrentDirectory())
+    : Path.Combine(repoRoot, "artifacts", "docs.pws");
+
+Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
 var packer = new PwsPacker();
 var (fullKey, _, publicKeyExport) = PwsSigningKey.GenerateEcDsa();
 

@@ -61,6 +61,61 @@ cd docs && pnpm build
 1. ✅ `MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
 2. ✅ `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Documentazione aggiornata con le modifiche apportate
+4. ✅ Messaggio di commit in formato **Conventional Commits**
+
+---
+
+## Conventional Commits + SemVer
+
+Ogni commit **deve** seguire il formato [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<tipo>[scope opzionale][! per breaking]: <descrizione>
+
+[corpo opzionale]
+
+[footer opzionale — es. BREAKING CHANGE: ...]
+```
+
+### Tipi ammessi e impatto SemVer
+
+| Tipo | Descrizione | SemVer |
+|------|-------------|--------|
+| `feat` | Nuova funzionalità | **MINOR** `0.x.0` |
+| `fix` | Correzione di un bug | **PATCH** `0.0.x` |
+| `feat!` / `fix!` / `BREAKING CHANGE` | Rottura compatibilità API | **MAJOR** `x.0.0` |
+| `docs` | Solo documentazione | no bump |
+| `refactor` | Refactoring senza nuove feature o fix | no bump |
+| `test` | Aggiunta/modifica test | no bump |
+| `chore` | Aggiornamenti build, dipendenze, CI | no bump |
+| `perf` | Miglioramento prestazioni | no bump |
+| `style` | Formattazione, whitespace | no bump |
+| `ci` | Modifiche pipeline CI/CD | no bump |
+| `build` | Modifiche al sistema di build | no bump |
+
+### Esempi
+
+```bash
+feat(providers): aggiunge SqliteContentProvider
+fix(navigation): corregge doppio push su GoBack
+feat!: ContentResponse.Content diventa required
+docs(providers): documenta ApiContentProvider
+chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
+refactor(core): estrae interfaccia INavigationHistory
+```
+
+### Scope consigliati
+
+| Scope | Riguarda |
+|-------|----------|
+| `core` | PWS.Core (qualsiasi) |
+| `app` | PWS.App (qualsiasi) |
+| `providers` | IContentProvider e implementazioni |
+| `navigation` | NavigationService, NavigationHistory |
+| `ui` | XAML, stili, layout |
+| `vm` | BrowserViewModel, BaseViewModel |
+| `docs` | Documentazione Docusaurus |
+| `deps` | Dipendenze NuGet o npm |
 
 ---
 

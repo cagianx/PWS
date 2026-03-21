@@ -61,16 +61,56 @@ PWS.slnx
 
 ---
 
-## Regola fondamentale — Prima di ogni commit
+sco## Regola fondamentale — Prima di ogni commit
 
 **Ogni volta che apporti modifiche, PRIMA del commit devi:**
 
 1. ✅ Verificare che il C# compili: `MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
 2. ✅ Verificare che Docusaurus compili: `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Aggiornare la documentazione in `docs/` riflettendo le modifiche apportate
+4. ✅ Usare il formato **Conventional Commits** per il messaggio
 
 > Questa regola vale sia per modifiche al codice C# sia per modifiche alla documentazione.
 > La documentazione è parte del progetto al pari del codice.
+
+---
+
+## Conventional Commits + SemVer
+
+Ogni commit **deve** seguire il formato [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<tipo>[scope opzionale][! per breaking]: <descrizione>
+```
+
+### Tipi e impatto SemVer
+
+| Tipo | SemVer | Quando usarlo |
+|------|--------|---------------|
+| `feat` | MINOR | Nuova funzionalità |
+| `fix` | PATCH | Correzione bug |
+| `feat!` / `BREAKING CHANGE` | MAJOR | Rottura compatibilità |
+| `docs` | — | Solo documentazione |
+| `refactor` | — | Refactoring puro |
+| `test` | — | Test |
+| `chore` | — | Build, dipendenze, CI |
+| `perf` | — | Ottimizzazioni |
+| `style` | — | Formattazione |
+| `ci` | — | Pipeline CI/CD |
+
+### Scope consigliati
+
+`core` · `app` · `providers` · `navigation` · `ui` · `vm` · `docs` · `deps`
+
+### Esempi
+
+```bash
+feat(providers): aggiunge SqliteContentProvider
+fix(navigation): corregge doppio push su GoBack
+feat!: ContentResponse.Content diventa required
+docs(providers): documenta ApiContentProvider
+chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
+```
 
 ---
 

@@ -3,5 +3,6 @@
     <Project Path="src/PWS.App.Linux/PWS.App.Linux.csproj" />
     <Project Path="src/PWS.Core/PWS.Core.csproj" />
     <Project Path="src/PWS.Format/PWS.Format.csproj" />
+    <Project Path="src/PWS.Format.Tests/PWS.Format.Tests.csproj" />
   </Folder>
 </Solution>

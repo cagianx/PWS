@@ -14,5 +14,13 @@
     -->
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Espone le classi internal (JwtHelper, MerkleHasher, NoneKey, HmacKey, EcDsaKey…)
+         al progetto di test senza renderle pubbliche. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>PWS.Format.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>
 

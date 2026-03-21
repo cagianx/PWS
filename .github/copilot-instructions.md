@@ -2,42 +2,12 @@
 
 ## Panoramica
 
-**PWS** sta per **Portable WebSite**: un formato file (simile a uno ZIP) che racchiude
-un intero sito web statico (HTML, CSS, JS, asset) in un singolo archivio portabile con
-estensione `.pws`.
-
-Il sistema è composto da due parti:
-
-1. **`pws pack`** (TODO) — CLI che prende la cartella `build/` di uno SSG (Docusaurus,
-   Hugo, Next.js, …) e la impacchetta in un `.pws` con un `manifest.json` di metadati
-2. **PWS Browser** (questa app) — lettore nativo GTK4 che apre i file `.pws`
-   e li renderizza tramite WebView **senza mai estrarre file su disco**
-
-### Flusso completo
-
-```
-Docusaurus/Hugo/...
-  └─ pnpm build  →  build/           (cartella con centinaia di file)
-  └─ pws pack    →  docs.pws         (un solo file archivio ZIP)
-
-PWS Browser
-  └─ FilePicker  →  apre docs.pws
-  └─ PwsFileContentProvider          (legge ZIP in-memory)
-  └─ NavigationService
-  └─ WebView GTK4                    (renderizza, zero server)
-```
-
-### Analogia
-| Formato | Contenuto |
-|---------|-----------|
-| `.epub` | libro elettronico (ZIP + HTML/CSS) |
-| `.docx` | documento Word (ZIP + XML) |
-| **`.pws`** | sito web portabile (ZIP + HTML/CSS/JS/asset) |
-
-### Perché IContentProvider?
-La WebView non sa nulla del formato `.pws`. L'archivio viene aperto una volta sola,
-e ogni richiesta di risorsa (pagina, immagine, script) viene intercettata e servita
-dal provider senza mai passare per il filesystem o per HTTP.
+**PWS** è un browser .NET MAUI che gira nativamente su **Linux/GTK4** tramite il pacchetto
+[`Platform.Maui.Linux.Gtk4`](https://github.com/Redth/Maui.Gtk) (v0.6.0).
+Il punto chiave del progetto è che la WebView **non carica mai file dal filesystem**:
+il contenuto (HTML, dati, ecc.) viene sempre fornito da un'astrazione chiamata
+`IContentProvider`, che può essere implementata in qualunque modo (in-memory, API REST,
+database, ecc.).
 
 ---
 
@@ -52,7 +22,7 @@ PWS.slnx
 │   │   ├── Navigation/     ← NavigationHistory, NavigationService
 │   │   └── Providers/      ← InMemoryContentProvider, ApiContentProvider,
 │   │                           CompositeContentProvider
-│   └── PWS.App/            ← app MAUI GTK4 (net10.0)
+│   └── PWS.App.Linux/      ← app MAUI GTK4 (Linux-only, net10.0)
 │       ├── Program.cs      ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs  ← DI builder (UseMauiAppLinuxGtk4<App>)
 │       ├── App.xaml/.cs    ← Application root, imposta MainPage = new AppShell()
@@ -80,7 +50,9 @@ PWS.slnx
 - `NavigationService` coordina `IContentProvider` e `NavigationHistory`;
   **non** sa nulla della UI.
 
-### PWS.App
+### PWS.App.Linux
+- Progetto **separato** dedicato a Linux: `Platform.Maui.Linux.Gtk4` porta dipendenze
+  native GTK4 che non devono inquinare build su altri OS.
 - `BrowserViewModel` non dipende da MAUI Controls: usa solo `ICommand` e `INotifyPropertyChanged`.
 - `BrowserPage.xaml.cs` è l'unico punto in cui si tocca la `WebView` MAUI.
 - Il ViewModel risolto tramite `IPlatformApplication.Current!.Services.GetRequiredService<T>()`:
@@ -91,11 +63,11 @@ PWS.slnx
 
 ---
 
-sco## Regola fondamentale — Prima di ogni commit
+## Regola fondamentale — Prima di ogni commit
 
 **Ogni volta che apporti modifiche, PRIMA del commit devi:**
 
-1. ✅ Verificare che il C# compili: `dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
+1. ✅ Verificare che il C# compili: `dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj` → **0 errori**
 2. ✅ Verificare che Docusaurus compili: `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Aggiornare la documentazione in `docs/` riflettendo le modifiche apportate
 4. ✅ Usare il formato **Conventional Commits** per il messaggio
@@ -147,16 +119,18 @@ chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
 ## Come buildare
 
 ```bash
-# .NET / C#  (MSBuildEnableWorkloadResolver=false è in Directory.Build.props)
-dotnet build src/PWS.App/PWS.App.csproj
+# .NET / C#  (senza il workload MAUI tradizionale, che è rotto su net10.0)
+dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj
 
 # Docusaurus (sviluppo)
-cd docs && npm run start
+cd docs && pnpm start
 
 # Docusaurus (produzione)
-cd docs && npm run build
+cd docs && pnpm build
 ```
 
+> **Variabile d'ambiente consigliata** nel proprio shell profile:
+> `export MSBuildEnableWorkloadResolver=false`
 
 ---
 
@@ -193,13 +167,8 @@ sudo dnf install gtk4-devel webkitgtk6.0-devel
 
 ## Roadmap / TODO
 
-- [ ] Definire la specifica del formato `.pws` (struttura archivio, manifest)
-- [ ] Implementare `PwsFileContentProvider` — legge risorse dall'archivio `.pws`
-- [ ] Implementare `pws pack` — CLI che impacchetta `build/` → `.pws`
 - [ ] Aggiungere `ApiContentProvider` al `CompositeContentProvider` in `MauiProgram.cs`
 - [ ] Gestire `http://` e `https://` attraverso `ApiContentProvider` nella `WebView`
-- [ ] Dialog di apertura file `.pws` (via MAUI Essentials `FilePicker`)
 - [ ] Aggiungere la barra di progresso durante il caricamento
 - [ ] Completare la documentazione in `/docs`
 - [ ] Test unitari per `PWS.Core` (xUnit)
-

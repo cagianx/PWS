@@ -2,15 +2,22 @@
 sidebar_position: 3
 ---
 
-# PWS.App
+# PWS.App.Linux
 
-`PWS.App` è l'applicazione MAUI GTK4. È il layer di presentazione: conosce MAUI e GTK4,
+`PWS.App.Linux` è l'applicazione MAUI GTK4 dedicata a Linux. È il layer di presentazione: conosce MAUI e GTK4,
 ma delega tutta la logica a `PWS.Core` tramite interfacce.
+
+:::info Progetto separato
+Il progetto usa [`Platform.Maui.Linux.Gtk4`](https://github.com/Redth/Maui.Gtk) che porta dipendenze
+native GTK4 specifiche per Linux. Per questo motivo è mantenuto come **progetto separato** rispetto
+a un'eventuale app MAUI multi-piattaforma, evitando che le dipendenze native inquinino la build su
+altri OS.
+:::
 
 ## Struttura
 
 ```
-PWS.App/
+PWS.App.Linux/
 ├── Program.cs          ← entry point GtkMauiApplication
 ├── MauiProgram.cs      ← DI builder
 ├── App.xaml/.cs        ← Application root

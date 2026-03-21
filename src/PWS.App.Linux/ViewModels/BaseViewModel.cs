@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace PWS.App.ViewModels;
+namespace PWS.App.Linux.ViewModels;
 
 /// <summary>
 /// Base per tutti i ViewModel: implementa INotifyPropertyChanged

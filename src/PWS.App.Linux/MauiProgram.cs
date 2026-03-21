@@ -1,12 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Hosting;
 using Platform.Maui.Linux.Gtk4.Hosting;
-using PWS.App.ViewModels;
+using PWS.App.Linux.ViewModels;
 using PWS.Core.Abstractions;
 using PWS.Core.Navigation;
 using PWS.Core.Providers;
 
-namespace PWS.App;
+namespace PWS.App.Linux;
 
 public static class MauiProgram
 {

@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/PWS.App/PWS.App.csproj" />
+    <Project Path="src/PWS.App.Linux/PWS.App.Linux.csproj" />
     <Project Path="src/PWS.Core/PWS.Core.csproj" />
   </Folder>
 </Solution>

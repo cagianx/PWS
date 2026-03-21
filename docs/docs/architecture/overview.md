@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Panoramica dell'architettura
 
-PWS è diviso in due layer nettamente separati: **PWS.Core** (logica pura) e **PWS.App** (UI MAUI).
+PWS è diviso in due layer nettamente separati: **PWS.Core** (logica pura) e **PWS.App.Linux** (UI MAUI GTK4).
 
 ## Contesto: dal build al browser
 
@@ -28,7 +28,7 @@ FASE 2 — Lettura
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      PWS.App                            │
+│                   PWS.App.Linux                          │
 │                   (MAUI / GTK4)                         │
 │                                                         │
 │  ┌──────────────┐    ┌───────────────────────────────┐  │
@@ -97,7 +97,7 @@ Il flusso completo quando l'utente apre `archivio.pws` e clicca un link interno:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      PWS.App                            │
+│                   PWS.App.Linux                          │
 │                   (MAUI / GTK4)                         │
 │                                                         │
 │  ┌──────────────┐    ┌───────────────────────────────┐  │

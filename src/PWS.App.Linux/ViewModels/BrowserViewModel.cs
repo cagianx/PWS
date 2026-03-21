@@ -2,7 +2,7 @@ using System.Windows.Input;
 using PWS.Core.Abstractions;
 using PWS.Core.Models;
 
-namespace PWS.App.ViewModels;
+namespace PWS.App.Linux.ViewModels;
 
 /// <summary>
 /// ViewModel principale del browser.

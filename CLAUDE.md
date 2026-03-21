@@ -5,43 +5,9 @@ Viene letto automaticamente da Claude all'inizio di ogni sessione.
 
 ## Progetto: PWS Browser
 
-**PWS** sta per **Portable WebSite**: un formato file (simile a uno ZIP) che
-incapsula l'**output di build di un sito statico** (HTML/CSS/JS/asset) — prodotto
-da Docusaurus, Hugo, Next.js, ecc. — in un **singolo archivio portabile** con
-estensione `.pws`.
-
-Il sistema è composto da due parti:
-
-1. **`pws pack`** (TODO) — CLI/tool che prende la cartella `build/` di uno SSG
-   e la impacchetta in un file `.pws` (con un `manifest.json` di metadati)
-2. **PWS Browser** (questa app) — lettore nativo GTK4 che apre i file `.pws`
-   e li renderizza tramite WebView **senza mai estrarre file su disco**
-
-### Flusso completo
-
-```
-Docusaurus/Hugo/...
-  └─ pnpm build  →  build/           (cartella con centinaia di file)
-  └─ pws pack    →  docs.pws         (un solo file archivio ZIP)
-
-PWS Browser
-  └─ FilePicker  →  apre docs.pws
-  └─ PwsFileContentProvider          (legge ZIP in-memory)
-  └─ NavigationService
-  └─ WebView GTK4                    (renderizza, zero server)
-```
-
-### Analogia
-| Formato | Contenuto |
-|---------|-----------|
-| `.epub` | libro elettronico (ZIP + HTML/CSS) |
-| `.docx` | documento Word (ZIP + XML) |
-| **`.pws`** | sito web portabile (ZIP + HTML/CSS/JS/asset) |
-
-### Perché IContentProvider?
-La WebView non sa nulla del formato `.pws`. L'archivio viene aperto una volta sola,
-e ogni richiesta di risorsa (pagina, immagine, script) viene intercettata e servita
-dal provider senza mai passare per il filesystem o per HTTP.
+**PWS** è un browser .NET MAUI nativo per **Linux/GTK4** (`Platform.Maui.Linux.Gtk4` v0.6.0).
+La caratteristica chiave è che la WebView **non carica mai contenuti dal filesystem**:
+tutto passa attraverso l'astrazione `IContentProvider`.
 
 ---
 
@@ -51,7 +17,7 @@ dal provider senza mai passare per il filesystem o per HTTP.
 PWS_MAUI/
 ├── src/
 │   ├── PWS.Core/        ← libreria portable net10.0, ZERO dipendenze MAUI
-│   └── PWS.App/         ← app MAUI GTK4 net10.0
+│   └── PWS.App.Linux/   ← app MAUI GTK4 net10.0 (Linux-only)
 ├── docs/                ← documentazione Docusaurus (TypeScript, pnpm)
 └── CLAUDE.md
 ```
@@ -62,7 +28,8 @@ PWS_MAUI/
 - `Navigation/`   → `NavigationHistory`, `NavigationService`
 - `Providers/`    → `InMemoryContentProvider` (pws://), `ApiContentProvider` (http/https/api://), `CompositeContentProvider`
 
-### PWS.App (MAUI GTK4)
+### PWS.App.Linux (MAUI GTK4 — Linux)
+- Progetto **separato** dedicato a Linux: le dipendenze native GTK4 non inquinano altri target
 - `Program.cs`        → entry point `GtkMauiApplication`
 - `MauiProgram.cs`    → DI builder con `UseMauiAppLinuxGtk4<App>`
 - `Pages/BrowserPage` → WebView + toolbar + status bar
@@ -76,8 +43,8 @@ PWS_MAUI/
 ## Comandi di build
 
 ```bash
-# C# — MSBuildEnableWorkloadResolver=false è in Directory.Build.props (automatico)
-dotnet build src/PWS.App/PWS.App.csproj
+# C# — (MSBuildEnableWorkloadResolver=false è già in Directory.Build.props)
+dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj
 
 # Docs — sviluppo
 cd docs && pnpm start
@@ -86,12 +53,11 @@ cd docs && pnpm start
 cd docs && pnpm build
 ```
 
-
 ---
 
 ## Regola fondamentale — Prima di ogni commit
 
-1. ✅ `dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
+1. ✅ `dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj` → **0 errori**
 2. ✅ `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Documentazione aggiornata con le modifiche apportate
 4. ✅ Messaggio di commit in formato **Conventional Commits**
@@ -142,7 +108,7 @@ refactor(core): estrae interfaccia INavigationHistory
 | Scope | Riguarda |
 |-------|----------|
 | `core` | PWS.Core (qualsiasi) |
-| `app` | PWS.App (qualsiasi) |
+| `app` | PWS.App.Linux (qualsiasi) |
 | `providers` | IContentProvider e implementazioni |
 | `navigation` | NavigationService, NavigationHistory |
 | `ui` | XAML, stili, layout |
@@ -190,13 +156,8 @@ sudo dnf install gtk4-devel webkitgtk6.0-devel        # Fedora
 
 ## Roadmap / TODO
 
-- [ ] Definire la specifica del formato `.pws` (struttura archivio, `manifest.json`)
-- [ ] Implementare `PwsFileContentProvider` — legge risorse dall'archivio `.pws` via `ZipArchive`
-- [ ] Implementare `pws pack` — CLI che impacchetta `build/` → `.pws`
 - [ ] `ApiContentProvider` nel `CompositeContentProvider` di `MauiProgram.cs`
 - [ ] Gestire `http://` e `https://` via `ApiContentProvider` nella WebView
-- [ ] Dialog di apertura file `.pws` (via MAUI Essentials `FilePicker`)
 - [ ] Barra di progresso durante il caricamento
 - [ ] Test unitari per `PWS.Core` (xUnit)
 - [ ] Completare la documentazione in `/docs`
-

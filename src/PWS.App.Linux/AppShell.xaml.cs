@@ -1,7 +1,7 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 
-namespace PWS.App;
+namespace PWS.App.Linux;
 
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class AppShell : Shell

@@ -104,7 +104,7 @@ PWS_MAUI/
 │   │   └── Providers/     ← InMemoryContentProvider, ApiContentProvider,
 │   │                          CompositeContentProvider
 │   │                          [ PwsFileContentProvider — TODO ]
-│   └── PWS.App/           ← app MAUI GTK4
+│   └── PWS.App.Linux/     ← app MAUI GTK4 (Linux-only, net10.0)
 │       ├── Program.cs     ← entry point (GtkMauiApplication)
 │       ├── MauiProgram.cs ← DI builder
 │       ├── Pages/         ← BrowserPage (WebView + toolbar + status bar)
@@ -121,10 +121,10 @@ PWS_MAUI/
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 
 # C# — build  (MSBuildEnableWorkloadResolver=false è in Directory.Build.props)
-dotnet build src/PWS.App/PWS.App.csproj
+dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj
 
 # C# — avvio
-dotnet run --project src/PWS.App/PWS.App.csproj
+dotnet run --project src/PWS.App.Linux/PWS.App.Linux.csproj
 
 # Documentazione
 cd docs && pnpm install && pnpm build
@@ -138,7 +138,7 @@ cd docs && pnpm install && pnpm build
 | Componente | Stato |
 |-----------|-------|
 | `PWS.Core` — astrazioni e navigazione | ✅ |
-| `PWS.App` — UI browser GTK4 | ✅ |
+| `PWS.App.Linux` — UI browser GTK4 | ✅ |
 | `InMemoryContentProvider` (demo/dev) | ✅ |
 | `ApiContentProvider` (http/api) | ✅ |
 | Specifica formato `.pws` e `manifest.json` | 🔲 |
@@ -155,7 +155,7 @@ cd docs && pnpm install && pnpm build
 La documentazione completa è in [`docs/`](./docs):
 
 - **Getting Started** — prerequisiti, build, avvio
-- **Architettura** — panoramica, PWS.Core, PWS.App
+- **Architettura** — panoramica, PWS.Core, PWS.App.Linux
 - **Content Providers** — `IContentProvider`, InMemory, Api, Composite
 
 ---

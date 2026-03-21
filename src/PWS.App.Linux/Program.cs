@@ -1,7 +1,7 @@
 using Microsoft.Maui.Hosting;
 using Platform.Maui.Linux.Gtk4.Platform;
 
-namespace PWS.App;
+namespace PWS.App.Linux;
 
 /// <summary>
 /// Entry point Linux/GTK4.

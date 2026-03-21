@@ -2,9 +2,9 @@ using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
-using PWS.App.ViewModels;
+using PWS.App.Linux.ViewModels;
 
-namespace PWS.App.Pages;
+namespace PWS.App.Linux.Pages;
 
 /// <summary>
 /// Code-behind di BrowserPage.

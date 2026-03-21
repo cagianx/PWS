@@ -61,6 +61,19 @@ PWS.slnx
 
 ---
 
+## Regola fondamentale — Prima di ogni commit
+
+**Ogni volta che apporti modifiche, PRIMA del commit devi:**
+
+1. ✅ Verificare che il C# compili: `MSBuildEnableWorkloadResolver=false dotnet build src/PWS.App/PWS.App.csproj` → **0 errori**
+2. ✅ Verificare che Docusaurus compili: `cd docs && pnpm build` → **[SUCCESS]**
+3. ✅ Aggiornare la documentazione in `docs/` riflettendo le modifiche apportate
+
+> Questa regola vale sia per modifiche al codice C# sia per modifiche alla documentazione.
+> La documentazione è parte del progetto al pari del codice.
+
+---
+
 ## Come buildare
 
 ```bash

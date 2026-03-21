@@ -5,48 +5,50 @@ import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
+  emoji: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    title: 'IContentProvider',
+    emoji: '🔌',
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        La WebView non tocca mai il filesystem. Ogni contenuto passa attraverso
+        l'astrazione <code>IContentProvider</code>, implementabile in qualsiasi modo:
+        in-memory, REST API, database, generazione dinamica.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    title: 'GTK4 nativo su Linux',
+    emoji: '🐧',
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Powered by <strong>Platform.Maui.Linux.Gtk4</strong>: rendering nativo GTK4,
+        WebKitGTK per la WebView, nessun workload MAUI tradizionale richiesto.
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    title: 'Architettura pulita',
+    emoji: '🏗️',
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        <strong>PWS.Core</strong> è zero-MAUI (testabile ovunque).
+        <strong>PWS.App</strong> è il solo layer che conosce MAUI.
+        ViewModel, NavigationService e provider sono completamente disaccoppiati.
       </>
     ),
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, emoji, description}: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+      <div className="text--center" style={{fontSize: '4rem'}}>
+        {emoji}
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>

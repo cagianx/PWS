@@ -1,47 +1,50 @@
 ---
 sidebar_position: 1
+slug: /intro
 ---
 
-# Tutorial Intro
+# Introduzione a PWS Browser
 
-Let's discover **Docusaurus in less than 5 minutes**.
+**PWS** (Platform Web Surface) è un browser nativo per **Linux/GTK4** costruito con **.NET MAUI**.
 
-## Getting Started
+La caratteristica fondamentale di PWS è che la `WebView` **non carica mai contenuti direttamente dal filesystem o da URL arbitrari**: tutto il contenuto è fornito da un'astrazione chiamata `IContentProvider`, che può essere implementata in qualsiasi modo — dizionario in memoria, API REST, database, generazione dinamica, ecc.
 
-Get started by **creating a new site**.
+## Perché PWS?
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+I browser tradizionali sono accoppiati al protocollo HTTP e al filesystem. PWS rompe questo accoppiamento:
 
-### What you'll need
+| Browser tradizionale | PWS |
+|---------------------|-----|
+| Carica URL HTTP/HTTPS | Carica da `IContentProvider` |
+| Dipende da server web | Indipendente dalla sorgente |
+| Hardcoded su HTTP | Qualsiasi schema (`pws://`, `api://`, ...) |
+| Nessuna astrazione contenuto | `IContentProvider` intercambiabile |
 
-- [Node.js](https://nodejs.org/en/download/) version 20.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+## Stack tecnologico
 
-## Generate a new site
+| Componente | Tecnologia |
+|-----------|-----------|
+| Framework UI | .NET MAUI 10 |
+| Backend grafico | Platform.Maui.Linux.Gtk4 v0.6.0 |
+| WebView | WebKitGTK (via GTK4) |
+| Target | Linux nativo (net10.0) |
+| Documentazione | Docusaurus 3, TypeScript, pnpm |
 
-Generate a new Docusaurus site using the **classic template**.
+## Struttura del repository
 
-The classic template will automatically be added to your project after you run the command:
-
-```bash
-npm init docusaurus@latest my-website classic
+```
+PWS_MAUI/
+├── src/
+│   ├── PWS.Core/     ← logica pura, zero dipendenze MAUI
+│   └── PWS.App/      ← applicazione MAUI GTK4
+├── docs/             ← questa documentazione
+├── CLAUDE.md         ← istruzioni per Claude AI
+└── .github/
+    └── copilot-instructions.md  ← istruzioni per GitHub Copilot
 ```
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
+## Prossimi passi
 
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
-
-```bash
-cd my-website
-npm run start
-```
-
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+- [Prerequisiti e installazione](./getting-started/prerequisites)
+- [Come buildare e avviare](./getting-started/building)
+- [Panoramica architetturale](./architecture/overview)

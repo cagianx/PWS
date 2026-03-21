@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PWS.App</RootNamespace>
+    <AssemblyName>PWS.App</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      Platform.Maui.Linux.Gtk4 porta con sé Microsoft.Maui.Controls (10.0.x)
+      e i binding GirCore per GTK4. Non serve il workload MAUI tradizionale.
+      Per buildare senza il workload rotto usare:
+        MSBuildEnableWorkloadResolver=false dotnet build
+      oppure aggiungere la env var al proprio shell profile.
+    -->
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <EnableDefaultXamlItems>false</EnableDefaultXamlItems>
+  </PropertyGroup>
+
+  <!-- Package: GTK4 backend di Redth per MAUI su Linux -->
+  <ItemGroup>
+    <PackageReference Include="Platform.Maui.Linux.Gtk4" Version="0.6.0" />
+    <PackageReference Include="Platform.Maui.Linux.Gtk4.Essentials" Version="0.6.0" />
+  </ItemGroup>
+
+  <!-- Riferimento al progetto core (nessuna dipendenza MAUI) -->
+  <ItemGroup>
+    <ProjectReference Include="../PWS.Core/PWS.Core.csproj" />
+  </ItemGroup>
+
+  <!-- File XAML del layer UI
+       NOTA: con EnableDefaultXamlItems=false usare Include (non Update)
+             altrimenti i file non vengono aggiunti al progetto e InitializeComponent
+             non viene generato. -->
+  <ItemGroup>
+    <MauiXaml Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+    <MauiXaml Include="AppShell.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+    <MauiXaml Include="Pages\BrowserPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+    <MauiXaml Include="Resources\Styles\Colors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+    <MauiXaml Include="Resources\Styles\Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+  </ItemGroup>
+
+</Project>
+

@@ -1,0 +1,36 @@
+# ── .NET / C# ──────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Output di pubblicazione
+publish/
+out/
+
+# ── Docusaurus / Node ───────────────────────────────────────────────
+docs/node_modules/
+docs/.docusaurus/
+docs/build/
+
+# Log npm/pnpm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*~
+
+# ── Rider / JetBrains ───────────────────────────────────────────────
+.idea/
+*.iml
+

@@ -2,12 +2,25 @@
 
 ## Panoramica
 
-**PWS** è un browser .NET MAUI che gira nativamente su **Linux/GTK4** tramite il pacchetto
-[`Platform.Maui.Linux.Gtk4`](https://github.com/Redth/Maui.Gtk) (v0.6.0).
-Il punto chiave del progetto è che la WebView **non carica mai file dal filesystem**:
-il contenuto (HTML, dati, ecc.) viene sempre fornito da un'astrazione chiamata
-`IContentProvider`, che può essere implementata in qualunque modo (in-memory, API REST,
-database, ecc.).
+**PWS** sta per **Portable WebSite**: un formato file (simile a uno ZIP) che racchiude
+un intero sito web statico (HTML, CSS, JS, asset) in un singolo archivio portabile con
+estensione `.pws`.
+
+Il browser PWS apre questi archivi e li renderizza tramite una `WebView` nativa
+**senza mai estrarre i file su disco**: tutto il contenuto viene servito in-memory
+dall'astrazione `IContentProvider`, che legge direttamente dall'archivio `.pws`.
+
+### Analogia
+| Formato | Contenuto |
+|---------|-----------|
+| `.epub` | libro elettronico (ZIP + HTML/CSS) |
+| `.docx` | documento Word (ZIP + XML) |
+| **`.pws`** | sito web portabile (ZIP + HTML/CSS/JS/asset) |
+
+### Perché IContentProvider?
+La WebView non sa nulla del formato `.pws`. L'archivio viene aperto una volta sola,
+e ogni richiesta di risorsa (pagina, immagine, script) viene intercettata e servita
+dal provider senza mai passare per il filesystem o per HTTP.
 
 ---
 
@@ -165,8 +178,11 @@ sudo dnf install gtk4-devel webkitgtk6.0-devel
 
 ## Roadmap / TODO
 
+- [ ] Definire la specifica del formato `.pws` (struttura archivio, manifest)
+- [ ] Implementare `PwsFileContentProvider` — legge risorse dall'archivio `.pws`
 - [ ] Aggiungere `ApiContentProvider` al `CompositeContentProvider` in `MauiProgram.cs`
 - [ ] Gestire `http://` e `https://` attraverso `ApiContentProvider` nella `WebView`
+- [ ] Dialog di apertura file `.pws` (via MAUI Essentials `FilePicker`)
 - [ ] Aggiungere la barra di progresso durante il caricamento
 - [ ] Completare la documentazione in `/docs`
 - [ ] Test unitari per `PWS.Core` (xUnit)

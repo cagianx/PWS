@@ -6,7 +6,93 @@ sidebar_position: 1
 
 PWS è diviso in due layer nettamente separati: **PWS.Core** (logica pura) e **PWS.App** (UI MAUI).
 
+## Contesto: il formato `.pws`
+
+Un file `.pws` è un archivio ZIP con una struttura interna definita:
+
+```
+archivio.pws  (= ZIP rinominato)
+├── manifest.json   ← entry point, titolo, versione del sito
+├── index.html
+├── css/
+├── js/
+└── img/
+```
+
+Il browser riceve il path di un `.pws`, lo apre **una sola volta** in-memory e poi
+serve ogni risorsa richiesta dalla WebView tramite `IContentProvider` — senza mai
+estrarre nulla su disco.
+
 ## Diagramma
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      PWS.App                            │
+│                   (MAUI / GTK4)                         │
+│                                                         │
+│  ┌──────────────┐    ┌───────────────────────────────┐  │
+│  │ BrowserPage  │    │      BrowserViewModel         │  │
+│  │  (XAML/CS)   │◄──►│  AddressText, HtmlContent     │  │
+│  │              │    │  NavigateCommand, GoBack...    │  │
+│  │  [WebView]   │    └──────────────┬────────────────┘  │
+│  └──────────────┘                   │ INavigationService│
+└────────────────────────────────────-│───────────────────┘
+                                      │
+┌─────────────────────────────────────│───────────────────┐
+│                   PWS.Core          │                    │
+│               (net10.0, no MAUI)    ▼                    │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              NavigationService                   │   │
+│  │   NavigationHistory + IContentProvider           │   │
+│  └──────────────────────┬───────────────────────────┘   │
+│                         │ IContentProvider               │
+│          ┌──────────────┼──────────────┐                │
+│          ▼              ▼              ▼                 │
+│  ┌──────────────┐ ┌──────────┐ ┌─────────────────┐     │
+│  │  PwsFile     │ │   Api    │ │   Composite      │     │
+│  │  (archivio   │ │(http/api)│ │  (delega ai      │     │
+│  │   .pws)      │ └──────────┘ │   provider)      │     │
+│  └──────────────┘              └─────────────────-┘     │
+└─────────────────────────────────────────────────────────┘
+                    ▲
+             file.pws (ZIP)
+```
+
+## Flusso di navigazione
+
+Il flusso completo quando l'utente apre `archivio.pws` e clicca un link interno:
+
+```
+1. Apertura file
+   FilePicker → path del .pws → PwsFileContentProvider.Open(path)
+   (l'archivio rimane aperto in-memory per tutta la sessione)
+
+2. WebView.Navigating (evento MAUI) — es. link a "pws://about"
+   └─ e.Cancel = true
+   └─ BrowserViewModel.NavigateCommand.Execute("pws://about")
+
+3. NavigationService.NavigateAsync(uri)
+   └─ CompositeContentProvider → PwsFileContentProvider.GetAsync(request)
+   └─ legge "about.html" dall'archivio ZIP (ZipArchive.GetEntry)
+   └─ ContentResponse { Stream = <contenuto della entry> }
+
+4. NavigationService.Navigated evento
+   └─ BrowserViewModel.HtmlContent = StreamReader.ReadToEnd()
+
+5. BrowserPage.OnViewModelPropertyChanged
+   └─ BrowserWebView.Source = new HtmlWebViewSource { Html = HtmlContent }
+```
+
+## Principi di progetto
+
+| Principio | Implementazione |
+|-----------|----------------|
+| **File unico** | Un sito = un `.pws` — portabile come un `.epub` |
+| **Zero estrazione** | `ZipArchive` in-memory, nessun file temporaneo su disco |
+| **Separation of concerns** | PWS.Core non sa nulla di MAUI |
+| **Open/closed** | Nuovi provider → solo implementare `IContentProvider` |
+
 
 ```
 ┌─────────────────────────────────────────────────────────┐

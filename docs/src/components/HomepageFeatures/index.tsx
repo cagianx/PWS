@@ -11,13 +11,24 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'IContentProvider',
-    emoji: '🔌',
+    title: 'Formato Portable WebSite',
+    emoji: '📦',
     description: (
       <>
-        La WebView non tocca mai il filesystem. Ogni contenuto passa attraverso
-        l'astrazione <code>IContentProvider</code>, implementabile in qualsiasi modo:
-        in-memory, REST API, database, generazione dinamica.
+        Un file <code>.pws</code> è un archivio ZIP che contiene un intero sito web
+        statico (HTML, CSS, JS, asset). Un sito = un file — portabile come un{' '}
+        <code>.epub</code> o un <code>.docx</code>.
+      </>
+    ),
+  },
+  {
+    title: 'Zero estrazione su disco',
+    emoji: '🔒',
+    description: (
+      <>
+        La WebView non tocca mai il filesystem. Ogni risorsa viene servita
+        direttamente dall'archivio in-memory tramite <code>IContentProvider</code>,
+        senza file temporanei e senza accesso libero al disco.
       </>
     ),
   },
@@ -27,18 +38,8 @@ const FeatureList: FeatureItem[] = [
     description: (
       <>
         Powered by <strong>Platform.Maui.Linux.Gtk4</strong>: rendering nativo GTK4,
-        WebKitGTK per la WebView, nessun workload MAUI tradizionale richiesto.
-      </>
-    ),
-  },
-  {
-    title: 'Architettura pulita',
-    emoji: '🏗️',
-    description: (
-      <>
-        <strong>PWS.Core</strong> è zero-MAUI (testabile ovunque).
-        <strong>PWS.App</strong> è il solo layer che conosce MAUI.
-        ViewModel, NavigationService e provider sono completamente disaccoppiati.
+        WebKitGTK per la WebView. <strong>PWS.Core</strong> è zero-MAUI e
+        testabile in isolamento.
       </>
     ),
   },

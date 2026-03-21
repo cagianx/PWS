@@ -4,6 +4,13 @@ sidebar_position: 2
 
 # InMemoryContentProvider
 
+:::info Ruolo nel progetto
+`InMemoryContentProvider` è un **provider di sviluppo e demo**: permette di avviare
+il browser e navigare pagine di test senza un file `.pws` reale. Il provider
+destinato alla produzione sarà `PwsFileContentProvider`, che legge le risorse
+direttamente dall'archivio ZIP `.pws`.
+:::
+
 Serve contenuti da un dizionario in-memory. Ideale per pagine statiche, contenuti
 embeddati nel binario o testing.
 

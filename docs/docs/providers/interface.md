@@ -62,7 +62,8 @@ builder.Services.AddSingleton<IContentProvider>(sp =>
 
 | Provider | Schema | Descrizione |
 |----------|--------|-------------|
-| [`InMemoryContentProvider`](./in-memory) | `pws://` | Dizionario in-memory |
+| `PwsFileContentProvider` | `pws://` | **Provider principale** — legge risorse dall'archivio `.pws` (TODO) |
+| [`InMemoryContentProvider`](./in-memory) | `pws://` | Dizionario in-memory (sviluppo/demo) |
 | [`ApiContentProvider`](./api) | `http://`, `https://`, `api://` | Endpoint HTTP/REST |
 | [`CompositeContentProvider`](./composite) | (tutti) | Delega ai provider registrati |
 

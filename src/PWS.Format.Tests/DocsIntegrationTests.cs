@@ -167,6 +167,27 @@ public sealed class DocsIntegrationTests
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Cerca la root del repository risalendo dalla directory corrente fino a trovare PWS.slnx.
+    /// CI-friendly: funziona sia in locale che in CI, indipendentemente dalla working directory.
+    /// </summary>
+    private static string FindRepoRoot()
+    {
+        var current = Directory.GetCurrentDirectory();
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current, "PWS.slnx")))
+                return current;
+
+            var parent = Directory.GetParent(current);
+            current = parent?.FullName;
+        }
+
+        throw new InvalidOperationException(
+            "Impossibile trovare la root del repository (PWS.slnx non trovato). " +
+            $"Directory corrente: {Directory.GetCurrentDirectory()}");
+    }
+
     private static async Task EnsureDocsBuildExists()
     {
         // Se docs/build/ non esiste o è vuota, builda

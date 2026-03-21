@@ -123,6 +123,8 @@ refactor(core): estrae interfaccia INavigationHistory
 - `LangVersion latest`, `nullable enable`, `implicit usings enable`
 - Classi `sealed` di default
 - `MauiXaml Include` (mai `Update`) quando `EnableDefaultXamlItems=false`
+- Usare **`Dispatcher.Dispatch()`** (dalla pagina/view) per aggiornare la UI da thread diversi.
+  `MainThread.BeginInvokeOnMainThread` **non** è implementato da `Platform.Maui.Linux.Gtk4.Essentials`.
 - Provider → implementano `IContentProvider` → registrati in `CompositeContentProvider` in `MauiProgram.cs`
 - Il ViewModel NON dipende da MAUI Controls (solo `ICommand`, `INotifyPropertyChanged`)
 - `BrowserPage.xaml.cs` è l'**unico** punto in cui si tocca la `WebView`
@@ -150,6 +152,7 @@ refactor(core): estrae interfaccia INavigationHistory
 ```bash
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev   # Debian/Ubuntu
 sudo dnf install gtk4-devel webkitgtk6.0-devel        # Fedora
+sudo pacman -S webkitgtk-6.0                          # Arch/EndeavourOS/Manjaro
 ```
 
 ---

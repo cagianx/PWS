@@ -51,8 +51,9 @@ public partial class BrowserPage : ContentPage
         if (e.PropertyName != nameof(BrowserViewModel.HtmlContent)) return;
         if (sender is not BrowserViewModel vm) return;
 
-        // Forza l'aggiornamento sul thread UI
-        MainThread.BeginInvokeOnMainThread(() =>
+        // Usa il Dispatcher della pagina — MainThread.BeginInvokeOnMainThread
+        // non è implementato da Platform.Maui.Linux.Gtk4.Essentials
+        Dispatcher.Dispatch(() =>
         {
             BrowserWebView.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
         });

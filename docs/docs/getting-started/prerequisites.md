@@ -39,6 +39,11 @@ sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 sudo dnf install gtk4-devel webkitgtk6.0-devel
 ```
 
+### Arch / EndeavourOS / Manjaro
+```bash
+sudo pacman -S webkitgtk-6.0   # gtk4 è già incluso in base
+```
+
 :::note WebKitGTK
 `libwebkitgtk-6.0-dev` è necessario per la `WebView`. Senza di esso la WebView
 non verrà renderizzata e l'applicazione potrebbe andare in crash all'avvio.

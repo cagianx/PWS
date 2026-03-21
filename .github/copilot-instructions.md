@@ -149,6 +149,8 @@ cd docs && pnpm build
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 # Fedora
 sudo dnf install gtk4-devel webkitgtk6.0-devel
+# Arch / EndeavourOS / Manjaro
+sudo pacman -S webkitgtk-6.0
 ```
 
 ---
@@ -161,6 +163,8 @@ sudo dnf install gtk4-devel webkitgtk6.0-devel
   in `MauiProgram.cs`.
 - **Non** usare `Update` negli item `MauiXaml` del csproj quando
   `EnableDefaultXamlItems=false` — usare sempre `Include`.
+- Usare **`Dispatcher.Dispatch()`** (dalla pagina/view) per aggiornare la UI da thread diversi.
+  `MainThread.BeginInvokeOnMainThread` **non** è implementato da `Platform.Maui.Linux.Gtk4.Essentials`.
 - Docusaurus: TypeScript, tema `classic`.
 
 ---

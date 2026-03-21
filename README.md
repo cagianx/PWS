@@ -120,6 +120,9 @@ PWS_MAUI/
 # Prerequisiti di sistema (Debian/Ubuntu)
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 
+# Prerequisiti di sistema (Arch / EndeavourOS / Manjaro)
+sudo pacman -S webkitgtk-6.0   # gtk4 è già incluso in base
+
 # C# — build  (MSBuildEnableWorkloadResolver=false è in Directory.Build.props)
 dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj
 

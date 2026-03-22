@@ -28,6 +28,8 @@ public static class MauiProgram
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System",    LogEventLevel.Warning)
             .Enrich.FromLogContext()
+            .WriteTo.Console(
+                outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 path:                 Path.Combine(logDir, "pws-.log"),
                 rollingInterval:      RollingInterval.Day,
@@ -50,6 +52,7 @@ public static class MauiProgram
         // Servizio che mantiene il PwsContentProvider corrente
         builder.Services.AddSingleton<PwsFileService>();
         builder.Services.AddSingleton<IPwsArchivePicker, GtkPwsArchivePicker>();
+        builder.Services.AddSingleton<ErrorDialogService>();
 
         // ── Core (PWS.Core) ─────────────────────────────────────────
         // Provider in-memory per schema pws://

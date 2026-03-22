@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
+using PWS.App.Linux.Services;
 using PWS.App.Linux.ViewModels;
 
 namespace PWS.App.Linux.Pages;
@@ -35,14 +36,22 @@ public partial class BrowserPage : ContentPage
     {
         base.OnAppearing();
 
-        // Naviga alla home solo al primo avvio
-        if (!_initialLoadDone)
+        if (_initialLoadDone) return;
+        _initialLoadDone = true;
+
+        if (BindingContext is not BrowserViewModel vm) return;
+        if (!string.IsNullOrWhiteSpace(vm.HtmlContent)) return;  // già caricato da StartupPage
+        if (!string.Equals(vm.AddressText, "pws://home", StringComparison.OrdinalIgnoreCase)) return;
+
+        try
         {
-            _initialLoadDone = true;
-            if (BindingContext is BrowserViewModel vm
-                && string.IsNullOrWhiteSpace(vm.HtmlContent)
-                && string.Equals(vm.AddressText, "pws://home", StringComparison.OrdinalIgnoreCase))
-                await vm.InitializeAsync();
+            await vm.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            var svc = IPlatformApplication.Current?.Services.GetService<ErrorDialogService>();
+            if (svc is not null)
+                await svc.ShowAsync(ex, "Inizializzazione browser");
         }
     }
 
@@ -76,7 +85,7 @@ public partial class BrowserPage : ContentPage
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return;
 
-        // Qualsiasi altro schema (pws://, api://, ecc.) viene gestito
+        // Qualsiasi altro schema (pws://, pack://, api://, ecc.) viene gestito
         // dal NavigationService anziché direttamente dalla WebView
         e.Cancel = true;
 

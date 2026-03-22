@@ -22,20 +22,19 @@ public partial class StartupPage : ContentPage
 
     private async void OnOpenFileClicked(object? sender, EventArgs e)
     {
+        var services     = IPlatformApplication.Current!.Services;
+        var errorService = services.GetRequiredService<ErrorDialogService>();
+
         try
         {
-            var services = IPlatformApplication.Current!.Services;
             var archivePicker = services.GetRequiredService<IPwsArchivePicker>();
 
             // 1. Mostra file chooser nativo GTK
             var path = await archivePicker.PickAsync();
-
             if (string.IsNullOrWhiteSpace(path))
                 return; // Utente ha annullato
 
-            StatusLabel.Text = $"Apertura {Path.GetFileName(path)}...";
-            StatusLabel.TextColor = Colors.Gray;
-            StatusLabel.IsVisible = true;
+            SetStatus($"Apertura {Path.GetFileName(path)}…", Colors.Gray);
 
             // 2. Apri e verifica il .pws
             var reader = await PwsReader.OpenAsync(path);
@@ -44,52 +43,63 @@ public partial class StartupPage : ContentPage
             var site = reader.Sites.FirstOrDefault();
             if (site is null)
             {
-                ShowError("Il file .pws non contiene siti.");
                 reader.Dispose();
+                SetStatus("Il file .pws non contiene siti.", Colors.Red);
                 return;
             }
 
-            StatusLabel.Text = site.IsVerified
-                ? $"✓ Verificato: {site.Title} ({site.FileCount} file)"
-                : $"⚠ Non verificato: {site.Title} ({site.FileCount} file)";
-            StatusLabel.TextColor = site.IsVerified ? Colors.Green : Colors.Orange;
+            SetStatus(
+                site.IsVerified
+                    ? $"✓ Verificato: {site.Title} ({site.FileCount} file)"
+                    : $"⚠ Non verificato: {site.Title} ({site.FileCount} file)",
+                site.IsVerified ? Colors.Green : Colors.Orange);
 
-            // 4. Registra il provider nel servizio e naviga al browser
-            await Task.Delay(800); // Mostra il messaggio per un attimo
-            await OpenBrowser(reader, site.SiteId, site.EntryPoint);
+            // 4. Piccola pausa per mostrare lo stato, poi naviga al browser
+            await Task.Delay(600);
+            await OpenBrowserAsync(reader, site.SiteId, site.EntryPoint, errorService);
         }
         catch (Exception ex)
         {
-            ShowError($"Errore: {ex.Message}");
+            SetStatus($"Errore: {ex.Message}", Colors.Red);
+            await errorService.ShowAsync(ex, "Apertura file .pws");
         }
     }
 
-    private async Task OpenBrowser(PwsReader reader, string defaultSiteId, string entryPoint)
+    private async Task OpenBrowserAsync(
+        PwsReader          reader,
+        string             defaultSiteId,
+        string             entryPoint,
+        ErrorDialogService errorService)
     {
-        // Crea il provider e registralo nel servizio globale
-        var provider = new PwsContentProvider(reader, defaultSiteId);
-        
-        var services = IPlatformApplication.Current!.Services;
-        var pwsFileService = services.GetRequiredService<PwsFileService>();
-        pwsFileService.SetProvider(provider);
+        try
+        {
+            var services       = IPlatformApplication.Current!.Services;
+            var pwsFileService = services.GetRequiredService<PwsFileService>();
 
-        var browserPage = new BrowserPage();
+            var provider = new PwsContentProvider(reader, defaultSiteId);
+            pwsFileService.SetProvider(provider);
 
-        // Usa il ViewModel della pagina appena creata, non un nuovo transient dal container
-        if (browserPage.BindingContext is BrowserViewModel vm)
-            await vm.NavigateToUri($"pack://{defaultSiteId}/{entryPoint}");
+            var browserPage = new BrowserPage();
 
-        await Navigation.PushAsync(browserPage);
+            // Naviga prima di fare PushAsync così HtmlContent è già pronto
+            // e OnAppearing non ri-inizializza con pws://home
+            if (browserPage.BindingContext is BrowserViewModel vm)
+                await vm.NavigateToUri($"pack://{defaultSiteId}/{entryPoint}");
+
+            await Navigation.PushAsync(browserPage);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Errore apertura browser: {ex.Message}", Colors.Red);
+            await errorService.ShowAsync(ex, "Apertura browser");
+        }
     }
 
-    private void ShowError(string message)
+    private void SetStatus(string message, Color color)
     {
-        StatusLabel.Text = message;
-        StatusLabel.TextColor = Colors.Red;
+        StatusLabel.Text      = message;
+        StatusLabel.TextColor = color;
         StatusLabel.IsVisible = true;
     }
 }
-
-
-
 

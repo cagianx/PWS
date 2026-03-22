@@ -217,6 +217,9 @@ La documentazione completa è in [`docs/`](./docs):
 - Commit: [Conventional Commits](https://www.conventionalcommits.org/) + SemVer
   (`feat`→MINOR · `fix`→PATCH · `feat!`/`BREAKING CHANGE`→MAJOR)
 - Pre-commit: `dotnet build` → 0 errori **e** `pnpm build` → SUCCESS
+- Assistenti AI: possono preparare un riepilogo e proporre un messaggio di commit,
+  ma **non devono eseguire automaticamente** `git commit`, `git push` o `git tag`
+  senza conferma esplicita dell'utente
 - C#: `nullable enable`, `implicit usings`, classi `sealed` di default
 - `MauiXaml Include` (non `Update`) quando `EnableDefaultXamlItems=false`
 

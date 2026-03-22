@@ -76,11 +76,20 @@ cd docs && pnpm build
 3. ✅ Documentazione aggiornata con le modifiche apportate
 4. ✅ Messaggio di commit in formato **Conventional Commits**
 
+## Policy sui commit assistiti
+
+- L'assistente **non deve mai eseguire automaticamente** `git commit`, `git push`, `git tag` o altre operazioni equivalenti sul repository.
+- Dopo una modifica può al massimo:
+  - verificare build, test e documentazione;
+  - preparare un riepilogo delle modifiche;
+  - proporre un messaggio di commit in formato Conventional Commits.
+- Qualunque commit o push può essere eseguito **solo dopo conferma esplicita dell'utente**.
+
 ---
 
 ## Conventional Commits + SemVer
 
-Ogni commit **deve** seguire il formato [Conventional Commits](https://www.conventionalcommits.org/):
+Ogni commit **approvato esplicitamente dall'utente** deve seguire il formato [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <tipo>[scope opzionale][! per breaking]: <descrizione>

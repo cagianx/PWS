@@ -241,6 +241,11 @@ Su GTK4 il layout della `BrowserPage` deve rimanere **layout-driven**: la `WebVi
 `HorizontalOptions/VerticalOptions = Fill` e non deve fissare `WidthRequest` / `HeightRequest`,
 altrimenti i resize successivi della finestra possono restare "bloccati" sulla misura iniziale.
 
+In aggiunta, la versione Linux/GTK4 applica un workaround pragmatico: dopo un resize della
+finestra, la `BrowserPage` esegue un debounce e, se necessario, **ricrea la WebView** mantenendo
+la stessa `RenderedUrl`. Questo aggira i casi in cui il widget nativo WebKit non si riadatta
+correttamente ai resize successivi pur restando in un layout `Fill`.
+
 **Intercettazione link:**
 ```csharp
 private void WebView_Navigating(object? sender, WebNavigatingEventArgs e)

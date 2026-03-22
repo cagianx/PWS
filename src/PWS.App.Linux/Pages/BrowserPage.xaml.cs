@@ -21,6 +21,9 @@ public partial class BrowserPage : ContentPage
     private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
     private bool _allowOneLoopbackNavigation;
+    private CancellationTokenSource? _resizeWorkaroundCts;
+    private double _lastResizeWidth;
+    private double _lastResizeHeight;
 
     public BrowserPage()
     {
@@ -30,6 +33,8 @@ public partial class BrowserPage : ContentPage
         InitializeComponent();
         _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<BrowserPage>>();
         _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
+
+        SizeChanged += OnPageSizeChanged;
     }
 
     // ── Ciclo di vita ────────────────────────────────────────────
@@ -92,6 +97,80 @@ public partial class BrowserPage : ContentPage
         };
         _browserWebView.Navigating += WebView_Navigating;
         BrowserHost.Content = _browserWebView;
+    }
+
+    private void OnPageSizeChanged(object? sender, EventArgs e)
+    {
+        if (Width <= 0 || Height <= 0)
+            return;
+
+        if (Math.Abs(Width - _lastResizeWidth) < 1 && Math.Abs(Height - _lastResizeHeight) < 1)
+            return;
+
+        _lastResizeWidth = Width;
+        _lastResizeHeight = Height;
+
+        _logger.LogDebug("BrowserPage.SizeChanged: {Width}x{Height}", Width, Height);
+
+        // Workaround GTK4/WebKit: su alcune build il widget nativo non segue bene i
+        // resize successivi della finestra. Debounce e ricreazione della WebView
+        // preservando l'URL corrente.
+        _resizeWorkaroundCts?.Cancel();
+        _resizeWorkaroundCts = new CancellationTokenSource();
+        _ = ApplyResizeWorkaroundAsync(_resizeWorkaroundCts.Token);
+    }
+
+    private async Task ApplyResizeWorkaroundAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(150, cancellationToken);
+
+            await Dispatcher.DispatchAsync(() =>
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
+                if (_browserWebView?.Source is not UrlWebViewSource currentSource ||
+                    string.IsNullOrWhiteSpace(currentSource.Url))
+                {
+                    RootGrid.InvalidateMeasure();
+                    BrowserHost.InvalidateMeasure();
+                    _logger.LogTrace("BrowserPage.ApplyResizeWorkaround: nessuna Url corrente, solo invalidate layout.");
+                    return;
+                }
+
+                var currentUrl = currentSource.Url;
+                _logger.LogDebug("BrowserPage.ApplyResizeWorkaround: ricreo WebView per adattarla al resize. Url={Url}", currentUrl);
+
+                var oldWebView = _browserWebView;
+
+                _browserWebView = new WebView
+                {
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    Source = new UrlWebViewSource { Url = currentUrl },
+                };
+
+                _allowOneLoopbackNavigation = true;
+                _browserWebView.Navigating += WebView_Navigating;
+                BrowserHost.Content = _browserWebView;
+
+                if (oldWebView is not null)
+                    oldWebView.Navigating -= WebView_Navigating;
+
+                RootGrid.InvalidateMeasure();
+                BrowserHost.InvalidateMeasure();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // debounce cancellato da un resize successivo
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "BrowserPage.ApplyResizeWorkaround: errore nel workaround resize.");
+        }
     }
 
     // ── Intercettazione navigazione nella WebView ─────────────────

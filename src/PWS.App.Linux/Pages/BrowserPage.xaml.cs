@@ -18,6 +18,7 @@ namespace PWS.App.Linux.Pages;
 public partial class BrowserPage : ContentPage
 {
     private bool _bindingDone;
+    private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
 
     public BrowserPage()
@@ -64,9 +65,22 @@ public partial class BrowserPage : ContentPage
 
         Dispatcher.Dispatch(() =>
         {
+            EnsureWebView();
             _logger.LogDebug("BrowserPage: aggiorno WebView.Source con HtmlContent di {Len} caratteri.", vm.HtmlContent.Length);
-            BrowserWebView.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
+            _browserWebView!.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
         });
+    }
+
+    private void EnsureWebView()
+    {
+        if (_browserWebView is not null)
+            return;
+
+        _logger.LogDebug("BrowserPage.EnsureWebView: creo WebView lazy.");
+
+        _browserWebView = new WebView();
+        _browserWebView.Navigating += WebView_Navigating;
+        BrowserHost.Content = _browserWebView;
     }
 
     // ── Intercettazione navigazione nella WebView ─────────────────

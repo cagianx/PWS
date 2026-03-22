@@ -158,8 +158,11 @@ await Navigation.PushAsync(new BrowserPage());
 
 Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
 
-La `BrowserPage` si apre volutamente **senza navigare**: la WebView parte vuota e l'utente
-digita esplicitamente un URI del tipo `pws://<siteId>/index.html` nella barra indirizzi.
+La `BrowserPage` si apre volutamente **senza navigare**: mostra toolbar + status bar +
+un placeholder centrale. La `WebView` viene creata **lazy** solo quando arriva il primo
+`HtmlContent`, così l'apertura della pagina resta il più neutra possibile su GTK4.
+
+L'utente digita esplicitamente un URI del tipo `pws://<siteId>/index.html` nella barra indirizzi.
 
 ## BrowserViewModel
 
@@ -204,15 +207,21 @@ Shell crea le pagine via reflection (non constructor-injection), quindi si usa
 il service-locator pattern. Il binding viene assegnato in `OnAppearing()` per
 evitare di toccare i widget GTK troppo presto.
 
-**Aggiornamento WebView:**
+**Aggiornamento WebView lazy:**
 ```csharp
 private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
 {
     if (e.PropertyName == nameof(BrowserViewModel.HtmlContent))
         Dispatcher.Dispatch(() =>
-            BrowserWebView.Source = new HtmlWebViewSource { Html = vm.HtmlContent });
+        {
+            EnsureWebView();
+            _browserWebView!.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
+        });
 }
 ```
+
+La `WebView` non è più istanziata direttamente in XAML. Al suo posto c'è un `ContentView`
+placeholder (`BrowserHost`) che viene sostituito dalla `WebView` solo al primo contenuto.
 
 **Intercettazione link:**
 ```csharp

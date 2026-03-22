@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PWS.App.Linux.Pages.BrowserPage"
-             Title="{Binding PageTitle}"
+             Title="PWS Browser"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
     <Grid RowDefinitions="48,*,22">
@@ -61,10 +61,16 @@
                     Margin="2,0,4,0" />
         </Grid>
 
-        <!-- ── WebView ───────────────────────────────────────────── -->
-        <WebView Grid.Row="1"
-                 x:Name="BrowserWebView"
-                 Navigating="WebView_Navigating" />
+        <!-- ── Area contenuto ────────────────────────────────────── -->
+        <ContentView Grid.Row="1"
+                     x:Name="BrowserHost">
+            <Grid BackgroundColor="{StaticResource PageBackgroundColor}">
+                <Label Text="Nessuna pagina caricata"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       TextColor="{StaticResource SecondaryTextColor}" />
+            </Grid>
+        </ContentView>
 
         <!-- ── Barra di stato ────────────────────────────────────── -->
         <Label Grid.Row="2"

@@ -25,7 +25,9 @@ Compilazione completata.
 dotnet run --project src/PWS.App.Linux/PWS.App.Linux.csproj
 ```
 
-All'avvio si aprirà una finestra GTK4 con il browser che naviga automaticamente su `pws://home`.
+All'avvio si aprirà una finestra GTK4 con la `StartupPage`. Dopo aver aperto un archivio `.pws`,
+la `BrowserPage` si apre **vuota** e l'utente inserisce manualmente un URI del tipo
+`pws://<siteId>/index.html`.
 
 ## Compilare la documentazione
 
@@ -38,9 +40,28 @@ pnpm install
 # Build di produzione (verifica pre-commit)
 pnpm build
 
+# Build alla root del sito (equivalente a baseUrl "blank")
+pnpm run build:root
+
+# Build con prefisso GitHub Pages
+pnpm run build:ghpages
+
 # Server di sviluppo con hot-reload
 pnpm start
 ```
+
+### `DOCS_BASE_URL`
+
+La configurazione Docusaurus legge `DOCS_BASE_URL` dall'ambiente:
+
+| Valore | Risultato |
+|--------|-----------|
+| non impostato | `baseUrl = '/'` |
+| `blank` | `baseUrl = '/'` |
+| `/PWS_MAUI/` | `baseUrl = '/PWS_MAUI/'` |
+
+Questo permette di usare una build portabile per il packaging `.pws` e, quando serve,
+di ripristinare facilmente il prefisso GitHub Pages.
 
 ## Checklist pre-commit
 

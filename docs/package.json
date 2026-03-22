@@ -6,6 +6,8 @@
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
     "build": "docusaurus build",
+    "build:root": "DOCS_BASE_URL=blank docusaurus build",
+    "build:ghpages": "DOCS_BASE_URL=/PWS_MAUI/ docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",

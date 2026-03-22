@@ -4,6 +4,15 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+const rawBaseUrl = process.env.DOCS_BASE_URL?.trim();
+const baseUrl = !rawBaseUrl
+  ? '/'
+  : rawBaseUrl === 'blank'
+    ? '/'
+    : rawBaseUrl.startsWith('/')
+      ? (rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`)
+      : `/${rawBaseUrl}${rawBaseUrl.endsWith('/') ? '' : '/'}`;
+
 const config: Config = {
   title: 'PWS Browser',
   tagline: 'Browser .NET MAUI nativo per Linux/GTK4 con contenuti da IContentProvider',
@@ -18,7 +27,11 @@ const config: Config = {
   url: 'https://github.com',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/PWS_MAUI/',
+  // Se DOCS_BASE_URL è vuoto / "blank", il sito viene buildato alla root ('/').
+  // Esempi:
+  //   DOCS_BASE_URL=blank       => '/'
+  //   DOCS_BASE_URL=/PWS_MAUI/  => '/PWS_MAUI/'
+  baseUrl,
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.

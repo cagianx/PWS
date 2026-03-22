@@ -93,11 +93,29 @@ public sealed class BrowserViewModel : BaseViewModel
     /// <summary>Naviga ad un URI specifico (usato da codice esterno).</summary>
     public Task NavigateToUri(string uri) => NavigateTo(uri);
 
+    /// <summary>
+    /// Pre-compila la barra indirizzi senza navigare.
+    /// L'utente può poi premere Invio o "Vai" per avviare la navigazione.
+    /// </summary>
+    public void PreFillAddress(string uri)
+    {
+        AddressText   = uri;
+        StatusMessage = "Premi Invio o clicca Vai per caricare la pagina";
+    }
+
     // ── Implementazioni comandi ────────────────────────────────────
     private async Task NavigateTo(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            _logger.LogWarning("URI non valido: '{Url}'", url);
+            StatusMessage = $"URI non valido: {url}";
+            return;
+        }
+
+        _logger.LogDebug("NavigateTo → {Uri}", uri);
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
@@ -182,16 +200,26 @@ public sealed class BrowserViewModel : BaseViewModel
     {
         IsBusy = false;
         AddressText = e.Entry.Uri.ToString();
-        PageTitle = e.Entry.Title ?? e.Entry.Uri.Host;
-        StatusMessage = e.Response?.IsSuccess == true ? "Completato" : $"Errore {e.Response?.StatusCode}";
+        PageTitle   = e.Entry.Title ?? e.Entry.Uri.Host;
+
+        var ok = e.Response?.IsSuccess == true;
+        StatusMessage = ok ? "Completato" : $"Errore {e.Response?.StatusCode}";
+
+        _logger.LogDebug("OnNavigated ← {Uri}  status={Status}  hasResponse={HasResp}",
+            e.Entry.Uri, e.Response?.StatusCode, e.Response is not null);
 
         if (e.Response is { } resp)
         {
-            // leaveOpen: true — NavigationService dispone ContentResponse (e il suo stream)
-            // dopo che tutti i listener hanno finito di leggerlo.
             using var reader = new StreamReader(resp.Content,
                 System.Text.Encoding.UTF8, leaveOpen: true);
             HtmlContent = reader.ReadToEnd();
+
+            _logger.LogDebug("HtmlContent set: {Len} chars  (ok={Ok})",
+                HtmlContent.Length, ok);
+        }
+        else
+        {
+            _logger.LogWarning("OnNavigated: Response è null per {Uri}", e.Entry.Uri);
         }
 
         RefreshNavButtons();

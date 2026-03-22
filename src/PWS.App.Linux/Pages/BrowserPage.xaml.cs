@@ -36,7 +36,7 @@ public partial class BrowserPage : ContentPage
 
     // ── Ciclo di vita ────────────────────────────────────────────
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
 
@@ -45,36 +45,13 @@ public partial class BrowserPage : ContentPage
 
         if (BindingContext is not BrowserViewModel vm) return;
 
-        // GTK4 schedula la realizzazione dei widget nativi (GtkEntry, WebKitWebView…)
-        // nel main loop GLib. OnAppearing può arrivare PRIMA che quei widget siano
-        // "realized" (connessi al display), quindi Pango non ha ancora un contesto
-        // valido → gtk_text_attributes_ref / pango_layout_new → SIGSEGV.
-        //
-        // Task.Delay(0) con await forza il rientro nel SynchronizationContext MAUI
-        // (GLib main loop) e lascia che GTK processi la realizzazione prima di
-        // toccare qualsiasi widget.
-        await Task.Delay(0);
-
-        try
+        // Non navighiamo automaticamente: lasciamo che l'utente prema
+        // Invio o "Vai" dopo che la UI è completamente pronta.
+        // Questo evita qualsiasi problema di timing GTK4 con la widget realization.
+        if (_initialUri is not null)
         {
-            if (_initialUri is not null)
-            {
-                var uri = _initialUri;
-                _initialUri = null;
-                await vm.NavigateToUri(uri);
-            }
-            else if (string.IsNullOrWhiteSpace(vm.HtmlContent)
-                     && string.Equals(vm.AddressText, "pws://home",
-                                      StringComparison.OrdinalIgnoreCase))
-            {
-                await vm.InitializeAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            var svc = IPlatformApplication.Current?.Services.GetService<ErrorDialogService>();
-            if (svc is not null)
-                await svc.ShowAsync(ex, "Inizializzazione browser");
+            vm.PreFillAddress(_initialUri);
+            _initialUri = null;
         }
     }
 
@@ -116,4 +93,3 @@ public partial class BrowserPage : ContentPage
             vm.NavigateCommand.Execute(url);
     }
 }
-

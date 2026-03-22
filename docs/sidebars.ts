@@ -39,6 +39,14 @@ const sidebars: SidebarsConfig = {
         'providers/composite',
       ],
     },
+    {
+      type: 'category',
+      label: '🛠️ CLI (pwstool)',
+      items: [
+        'cli/index',
+        'cli/validate',
+      ],
+    },
   ],
 };
 

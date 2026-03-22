@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using PWS.Core.Models;
@@ -32,6 +33,31 @@ public sealed class LoopbackContentServer : IDisposable
     /// </para>
     /// </summary>
     private readonly SemaphoreSlim _zipLock = new(1, 1);
+
+    // ── Cache in memoria ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Voce della cache: bytes del file + metadati HTTP.
+    /// </summary>
+    private sealed record CacheEntry(byte[] Data, string MimeType, string? FinalUri);
+
+    /// <summary>
+    /// Cache in-memoria delle risorse già lette dallo ZIP.
+    /// Chiave: <c>relativePath</c> normalizzato (es. <c>"assets/js/main.js"</c>).
+    /// Thread-safe per letture concorrenti; le scritture avvengono solo
+    /// mentre si detiene <see cref="_zipLock"/>.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Totale byte occupati dalla cache. Modificato solo mentre si detiene
+    /// <see cref="_zipLock"/>, quindi non servono operazioni atomiche.
+    /// </summary>
+    private long _cacheSizeBytes;
+
+    /// <summary>Limite massimo complessivo della cache (5 MB).</summary>
+    private const long MaxCacheSizeBytes = 5L * 1024 * 1024;
 
     public LoopbackContentServer(
         PwsContentProvider provider,
@@ -145,17 +171,77 @@ public sealed class LoopbackContentServer : IDisposable
 
     private async Task<ContentResponse> GetContentAsync(string relativePath)
     {
-        // Serializza le letture ZIP: ZipArchive non è thread-safe.
+        // ── Fast path: cache hit ─────────────────────────────────────────────
+        if (_cache.TryGetValue(relativePath, out var cached))
+        {
+            _logger.LogTrace("Cache HIT: {Path} ({Bytes}B)", relativePath, cached.Data.Length);
+            return CacheEntryToResponse(cached);
+        }
+
+        // ── Slow path: lettura ZIP (serializzata) ────────────────────────────
         await _zipLock.WaitAsync(_cts.Token);
         try
         {
-            return await ReadAndBufferAsync(relativePath);
+            // Double-check: un altro thread potrebbe aver popolato la cache
+            // tra il primo TryGetValue e l'acquisizione del lock.
+            if (_cache.TryGetValue(relativePath, out cached))
+                return CacheEntryToResponse(cached);
+
+            return await ReadZipAndMaybeCacheAsync(relativePath);
         }
         finally
         {
             _zipLock.Release();
         }
     }
+
+    /// <summary>
+    /// Legge il file dallo ZIP (già sotto <see cref="_zipLock"/>), lo bufferizza
+    /// e, se la risposta è 200 e c'è spazio disponibile, lo inserisce in cache.
+    /// </summary>
+    private async Task<ContentResponse> ReadZipAndMaybeCacheAsync(string relativePath)
+    {
+        var buffered = await ReadAndBufferAsync(relativePath);
+
+        if (buffered.IsSuccess && buffered.Content is MemoryStream ms)
+        {
+            var bytes = ms.ToArray();
+            ms.Position = 0; // riposiziona per la lettura del client
+
+            if (_cacheSizeBytes + bytes.Length <= MaxCacheSizeBytes)
+            {
+                var entry = new CacheEntry(bytes, buffered.MimeType, buffered.FinalUri);
+                if (_cache.TryAdd(relativePath, entry))
+                {
+                    _cacheSizeBytes += bytes.Length;
+                    _logger.LogDebug(
+                        "Cache SET: {Path} ({Bytes}B) — totale {Total}B / {Max}B",
+                        relativePath, bytes.Length, _cacheSizeBytes, MaxCacheSizeBytes);
+                }
+            }
+            else
+            {
+                _logger.LogTrace(
+                    "Cache SKIP (limite 5 MB raggiunto): {Path} ({Bytes}B) — totale {Total}B",
+                    relativePath, bytes.Length, _cacheSizeBytes);
+            }
+        }
+
+        return buffered;
+    }
+
+    /// <summary>
+    /// Ricostruisce un <see cref="ContentResponse"/> a partire da una voce di cache.
+    /// Usa <c>new MemoryStream(byte[], writable:false)</c> per evitare copie inutili.
+    /// </summary>
+    private static ContentResponse CacheEntryToResponse(CacheEntry entry) =>
+        new()
+        {
+            StatusCode = 200,
+            MimeType   = entry.MimeType,
+            Content    = new MemoryStream(entry.Data, writable: false),
+            FinalUri   = entry.FinalUri,
+        };
 
     /// <summary>
     /// Legge il file dal provider e ne copia il contenuto in un <see cref="MemoryStream"/>.
@@ -237,6 +323,7 @@ public sealed class LoopbackContentServer : IDisposable
         _listener.Close();
         _cts.Dispose();
         _zipLock.Dispose();
+        _cache.Clear();   // libera la memoria occupata dalla cache
     }
 
     private static class HttpMethods

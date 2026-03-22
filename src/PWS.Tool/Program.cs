@@ -33,6 +33,10 @@ return verb.ToLowerInvariant() switch
         verbArgs,
         async opts => await ValidateCommand.RunAsync(opts, logger)),
 
+    "pack" => await RunVerb<PackOptions>(
+        verbArgs,
+        async opts => await PackCommand.RunAsync(opts, logger)),
+
     _ => UnknownVerb(verb),
 };
 
@@ -63,9 +67,13 @@ static void PrintHelp()
     Console.WriteLine("Uso:  pwstool <verbo> [opzioni]");
     Console.WriteLine();
     Console.WriteLine("Verbi disponibili:");
-    Console.WriteLine("  validate <file.pws>  Verifica l'integrità di un archivio .pws");
+    Console.WriteLine("  validate <file.pws>            Verifica l'integrità di un archivio .pws");
+    Console.WriteLine("  pack     <source> -o <out.pws> Crea un archivio .pws da directory o .zip");
     Console.WriteLine();
     Console.WriteLine("Esempi:");
     Console.WriteLine("  pwstool validate mysite.pws");
     Console.WriteLine("  pwstool validate mysite.pws --require-signed --verbose");
+    Console.WriteLine("  pwstool pack ./docs/build -o mysite.pws --id docs --title \"My Docs\"");
+    Console.WriteLine("  pwstool pack ./docs/build -o mysite.pws --sign ecdsa --key-out pubkey.txt");
+    Console.WriteLine("  pwstool pack ./dist.zip    -o mysite.pws --sign hmac:mysecret");
 }

@@ -20,9 +20,14 @@ public sealed class ValidateOptions
         HelpText = "Rifiuta archivi con token non firmati (alg:none).")]
     public bool RequireSigned { get; set; }
 
+    [Option('k', "key",
+        HelpText = "Chiave di verifica esterna: 'hmac:<segreto>', export ES256 ('ES256:base64…') oppure percorso a un file con la chiave pubblica. Necessario per archivi firmati con HMAC (la chiave simmetrica non è incorporata nel manifest).")]
+    public string? Key { get; set; }
+
     [Option('v', "verbose",
         Default = false,
         HelpText = "Mostra dettagli aggiuntivi (hash, file count, iat…).")]
     public bool Verbose { get; set; }
 }
+
 

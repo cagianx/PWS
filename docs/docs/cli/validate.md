@@ -31,6 +31,7 @@ pwstool validate <file.pws> [opzioni]
 | Opzione | Breve | Default | Descrizione |
 |---------|:-----:|:-------:|-------------|
 | `--require-signed` | `-s` | `false` | Rifiuta archivi con token non firmati (`alg:none`). |
+| `--key` | `-k` | — | Chiave di verifica esterna: `hmac:<segreto>`, export ES256 (`ES256:base64…`) oppure percorso a un file con la chiave pubblica. Necessario per archivi firmati con HMAC (la chiave simmetrica non è embedded nel manifest). |
 | `--verbose` | `-v` | `false` | Mostra hash Merkle, numero di file, data emissione JWT e lista completa dei file. |
 
 ## Exit code
@@ -51,6 +52,12 @@ dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate artifacts/docs.pws
 
 # Rifiuta pacchetti non firmati
 dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate artifacts/docs.pws --require-signed
+
+# Verifica archivio firmato con HMAC (la chiave non è nel manifest)
+dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate mysite.pws --key hmac:miosegreto
+
+# Verifica con chiave pubblica ES256 da file
+dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate mysite.pws --key pubkey.txt
 ```
 
 ## Output di esempio
@@ -82,5 +89,7 @@ Se un qualsiasi file viene modificato dopo la firma, l'hash ricalcolato al momen
 della validazione non corrisponderà a quello nel JWT → errore `content hash mismatch`.
 
 Vedere [Hash Merkle deterministico](../format/overview#hash-merkle-deterministico) per i dettagli dell'algoritmo.
+
+
 
 

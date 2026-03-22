@@ -45,6 +45,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'cli/index',
         'cli/validate',
+        'cli/pack',
       ],
     },
   ],

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using PWS.Format.Crypto;
 using PWS.Format.Reading;
 
 namespace PWS.Tool.Commands;
@@ -35,10 +36,31 @@ public static class ValidateCommand
         PwsReader reader;
         try
         {
+            // Risolvi chiave di verifica esterna (HMAC o ES256 da file/stringa)
+            IPwsSigningKey? verKey = null;
+            if (opts.Key is { } keySpec)
+            {
+                if (keySpec.StartsWith("hmac:", StringComparison.OrdinalIgnoreCase))
+                {
+                    verKey = PwsSigningKey.FromHmac(keySpec[5..]);
+                }
+                else if (File.Exists(keySpec))
+                {
+                    var export = (await File.ReadAllTextAsync(keySpec)).Trim();
+                    verKey = PwsSigningKey.FromExport(export);
+                }
+                else
+                {
+                    // Assume raw export string ("ES256:base64…")
+                    verKey = PwsSigningKey.FromExport(keySpec);
+                }
+            }
+
             var options = new PwsOpenOptions
             {
                 RequireSignedTokens = opts.RequireSigned,
                 Logger              = logger,
+                VerificationKey     = verKey,
             };
 
             reader = await PwsReader.OpenAsync(path, options);
@@ -115,6 +137,8 @@ public static class ValidateCommand
         return 0;
     }
 }
+
+
 
 
 

@@ -20,11 +20,16 @@ dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- <verbo> [opzioni]
 | Verbo | Descrizione |
 |-------|-------------|
 | [`validate`](./validate) | Verifica l'integrità di un archivio `.pws` |
+| [`pack`](./pack) | Crea un archivio `.pws` da directory o `.zip` |
 
 ## Esempio
 
 ```bash
+# Valida un archivio
 dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate mio-sito.pws
+
+# Crea un archivio da una directory
+dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- pack ./dist -o mio-sito.pws --sign ecdsa --key-out pubkey.txt
 ```
 
 ## Dipendenze
@@ -34,4 +39,6 @@ dotnet run --project src/PWS.Tool/PWS.Tool.csproj -- validate mio-sito.pws
 | `CommandLineParser` | 2.9.1 | Parsing argomenti CLI |
 | `Microsoft.Extensions.Logging.Console` | 10.0.* | Output diagnostica su console |
 | `PWS.Format` | (riferimento locale) | Lettura e verifica archivi `.pws` |
+
+
 

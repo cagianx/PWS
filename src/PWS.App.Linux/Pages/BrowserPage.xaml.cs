@@ -108,7 +108,7 @@ public partial class BrowserPage : ContentPage
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return;
 
-        // Qualsiasi altro schema (pws://, pack://, api://, ecc.) viene gestito
+        // Qualsiasi schema non-web (pws://, api://, ecc.) viene gestito
         // dal NavigationService anziché direttamente dalla WebView
         e.Cancel = true;
 

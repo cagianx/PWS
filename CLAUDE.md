@@ -46,7 +46,7 @@ PWS_MAUI/
 - `ViewModels/BrowserViewModel` → comandi nav, `HtmlContent`, `AddressText`
 
 **Flusso apertura `.pws`**: `StartupPage` → `Gtk.FileDialog` → `PwsReader.OpenAsync(path)`
-→ `PwsFileService.SetProvider(new PwsContentProvider(reader))` → `BrowserViewModel.NavigateToUri("pack://...")`
+→ `PwsFileService.SetProvider(new PwsContentProvider(reader))` → `BrowserViewModel.NavigateToUri("pws://...")`
 
 **Flusso link custom**: `WebView.Navigating` → `e.Cancel = true` → `BrowserViewModel.NavigateCommand`
 → `NavigationService` → `IContentProvider` → `HtmlWebViewSource`

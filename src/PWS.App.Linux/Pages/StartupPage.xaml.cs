@@ -79,7 +79,7 @@ public partial class StartupPage : ContentPage
             pwsFileService.SetProvider(provider);
 
             // L'entrypoint è sempre index.html — non configurabile per ora.
-            var initialUri  = $"pack://{defaultSiteId}/index.html";
+            var initialUri  = $"pws://{defaultSiteId}/index.html";
             var browserPage = new BrowserPage(initialUri);
 
             await Navigation.PushAsync(browserPage);

@@ -102,14 +102,17 @@ public static class MauiProgram
 
         public Task<ContentResponse> GetAsync(ContentRequest request, CancellationToken cancellationToken = default)
         {
-            if (_inMemory.CanHandle(request.Uri))
-                return _inMemory.GetAsync(request, cancellationToken);
-
+            // PwsContentProvider ha CanHandle più specifico (verifica il site ID dell'archivio),
+            // quindi viene controllato prima. InMemoryContentProvider è il fallback per
+            // le rotte built-in (pws://home, pws://about, ecc.).
             if (_pwsFileService.CurrentProvider?.CanHandle(request.Uri) == true)
                 return _pwsFileService.CurrentProvider.GetAsync(request, cancellationToken);
 
+            if (_inMemory.CanHandle(request.Uri))
+                return _inMemory.GetAsync(request, cancellationToken);
+
             return Task.FromResult(ContentResponse.Error(404,
-                $"Nessun provider registrato per lo schema '{request.Uri.Scheme}'."));
+                $"Nessun provider registrato per '{request.Uri}'."));
         }
     }
 }

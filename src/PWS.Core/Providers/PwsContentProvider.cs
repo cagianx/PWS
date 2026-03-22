@@ -7,10 +7,10 @@ namespace PWS.Core.Providers;
 /// <summary>
 /// Content provider che serve file da un archivio .pws aperto in memoria.
 /// <para>
-/// Schema URI: <c>pack://{siteId}/{relativePath}</c>
+/// Schema URI: <c>pws://{siteId}/{relativePath}</c>
 /// </para>
 /// <para>
-/// Esempio: <c>pack://docs/index.html</c> → legge <c>sites/docs/index.html</c> dal .pws.
+/// Esempio: <c>pws://docs/index.html</c> → legge <c>sites/docs/index.html</c> dal .pws.
 /// </para>
 /// <para>
 /// Il provider mantiene aperto il <see cref="PwsReader"/> fino a Dispose.
@@ -22,7 +22,7 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// Site ID di default quando l'URI non specifica un host (es. <c>pack:///index.html</c>).
+    /// Site ID di default quando l'URI non specifica un host (es. <c>pws:///index.html</c>).
     /// Usato se il .pws contiene un solo sito.
     /// </summary>
     public string? DefaultSiteId { get; }
@@ -49,8 +49,20 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
 
     // ── IContentProvider ─────────────────────────────────────────────────────
 
-    public bool CanHandle(Uri uri) =>
-        uri.Scheme.Equals("pack", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(Uri uri)
+    {
+        if (!uri.Scheme.Equals("pws", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // URI senza host (pws:///path): gestibile solo se c'è un DefaultSiteId
+        if (string.IsNullOrEmpty(uri.Host))
+            return DefaultSiteId is not null;
+
+        // URI con host: verifica che l'host corrisponda a un site ID noto nell'archivio.
+        // Questo evita conflitti con pws://home e pws://about (gestiti da InMemoryContentProvider).
+        return _reader.Manifest.Sites.Any(s =>
+            s.Id.Equals(uri.Host, StringComparison.OrdinalIgnoreCase));
+    }
 
     public Task<ContentResponse> GetAsync(ContentRequest request, CancellationToken cancellationToken = default)
     {
@@ -105,15 +117,15 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
 
     private (string siteId, string relativePath) ParseUri(Uri uri)
     {
-        // pack://docs/index.html       → siteId="docs", path="index.html"
-        // pack:///index.html            → siteId=DefaultSiteId, path="index.html"
-        // pack://docs/assets/main.css  → siteId="docs", path="assets/main.css"
+        // pws://docs/index.html       → siteId="docs", path="index.html"
+        // pws:///index.html            → siteId=DefaultSiteId, path="index.html"
+        // pws://docs/assets/main.css  → siteId="docs", path="assets/main.css"
 
         var siteId = string.IsNullOrEmpty(uri.Host) ? DefaultSiteId : uri.Host;
         if (string.IsNullOrEmpty(siteId))
             throw new InvalidOperationException(
-                "URI pack:/// richiede un DefaultSiteId. " +
-                "Specificare l'host (es. pack://docs/) o impostare DefaultSiteId.");
+                "URI pws:/// richiede un DefaultSiteId. " +
+                "Specificare l'host (es. pws://docs/) o impostare DefaultSiteId.");
 
         var relativePath = uri.AbsolutePath.TrimStart('/');
         return (siteId, relativePath);
@@ -143,5 +155,4 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
         };
     }
 }
-
 

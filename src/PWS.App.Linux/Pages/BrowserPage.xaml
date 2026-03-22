@@ -8,48 +8,53 @@
     <Grid x:Name="RootGrid"
           RowDefinitions="Auto,*,Auto"
           RowSpacing="0"
-          ColumnSpacing="0"
-          HorizontalOptions="Fill"
-          VerticalOptions="Fill">
+          ColumnSpacing="0">
 
         <!-- ── Toolbar ──────────────────────────────────────────── -->
         <Grid Grid.Row="0"
-              ColumnDefinitions="40,40,40,40,*,70"
+              ColumnDefinitions="40,40,40,40,40,*,70"
               BackgroundColor="{StaticResource ToolbarBackgroundColor}"
               Padding="4,4"
               HorizontalOptions="Fill"
               VerticalOptions="Start">
 
-            <!-- Indietro -->
+            <!-- Apri file -->
             <Button Grid.Column="0"
+                    Text="📂"
+                    Clicked="OnOpenFileClicked"
+                    Style="{StaticResource NavButtonStyle}"
+                    ToolTipProperties.Text="Apri file .pws" />
+
+            <!-- Indietro -->
+            <Button Grid.Column="1"
                     Text="‹"
                     Command="{Binding GoBackCommand}"
                     Style="{StaticResource NavButtonStyle}"
                     ToolTipProperties.Text="Indietro" />
 
             <!-- Avanti -->
-            <Button Grid.Column="1"
+            <Button Grid.Column="2"
                     Text="›"
                     Command="{Binding GoForwardCommand}"
                     Style="{StaticResource NavButtonStyle}"
                     ToolTipProperties.Text="Avanti" />
 
             <!-- Ricarica -->
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     Text="↻"
                     Command="{Binding RefreshCommand}"
                     Style="{StaticResource NavButtonStyle}"
                     ToolTipProperties.Text="Ricarica" />
 
             <!-- Interrompi -->
-            <Button Grid.Column="3"
+            <Button Grid.Column="4"
                     Text="✕"
                     Command="{Binding StopCommand}"
                     Style="{StaticResource NavButtonStyle}"
                     ToolTipProperties.Text="Interrompi caricamento" />
 
             <!-- Barra degli indirizzi -->
-            <Entry Grid.Column="4"
+            <Entry Grid.Column="5"
                    x:Name="AddressEntry"
                    Text="{Binding AddressText, Mode=TwoWay}"
                    ReturnCommand="{Binding NavigateCommand}"
@@ -61,7 +66,7 @@
                    Placeholder="http://127.0.0.1:…" />
 
             <!-- Pulsante Vai -->
-            <Button Grid.Column="5"
+            <Button Grid.Column="6"
                     Text="Vai"
                     Command="{Binding NavigateCommand}"
                     CommandParameter="{Binding AddressText}"

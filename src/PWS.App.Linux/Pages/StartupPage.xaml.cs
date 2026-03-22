@@ -110,10 +110,12 @@ public partial class StartupPage : ContentPage
             _logger.LogDebug("StartupPage.OpenBrowserAsync: provider e server loopback registrati (porta={Port}).",
                 pwsFileService.CurrentServer?.Port);
 
-            // Il browser navigherà automaticamente al sito nel suo OnAppearing.
-            _logger.LogDebug("StartupPage.OpenBrowserAsync: Navigation.PushAsync(new BrowserPage()).");
-            await Navigation.PushAsync(new BrowserPage());
-            _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage aperta con successo.");
+            // Sostituisce l'intera page root con BrowserPage invece di usare
+            // Navigation.PushAsync: in GTK4 le pagine pushed non ricevono gli eventi
+            // di resize della finestra, solo la root page è connessa al GtkWindow.
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: sostituisco Window.Page con BrowserPage (GTK4 resize fix).");
+            Application.Current!.Windows[0].Page = new BrowserPage();
+            _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage impostata come root page.");
         }
         catch (Exception ex)
         {

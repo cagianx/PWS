@@ -31,6 +31,10 @@ public partial class BrowserPage : ContentPage
         _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
 
         SizeChanged += OnPageSizeChanged;
+
+        // Quando il container del WebView cambia dimensione, aggiorniamo subito
+        // WidthRequest/HeightRequest sul widget nativo GTK4 (set_size_request).
+        BrowserHost.SizeChanged += (_, _) => SynchronizeWebViewSize();
     }
 
     // ── Ciclo di vita ────────────────────────────────────────────
@@ -98,6 +102,34 @@ public partial class BrowserPage : ContentPage
         _browserWebView.Navigating += WebView_Navigating;
         _browserWebView.Navigated  += WebView_Navigated;
         BrowserHost.Content = _browserWebView;
+
+        // Applica subito la dimensione esplicita per GTK4/WebKit
+        SynchronizeWebViewSize();
+    }
+
+    /// <summary>
+    /// Imposta esplicitamente <see cref="VisualElement.WidthRequest"/> e
+    /// <see cref="VisualElement.HeightRequest"/> della WebView in base alle dimensioni
+    /// correnti di <see cref="BrowserHost"/>. Su GTK4/WebKit queste proprietà si
+    /// traducono in <c>gtk_widget_set_size_request()</c> e sono necessarie per far
+    /// ridimensionare il widget nativo durante i resize della finestra.
+    /// </summary>
+    private void SynchronizeWebViewSize()
+    {
+        if (_browserWebView is null) return;
+
+        var w = BrowserHost.Width;
+        var h = BrowserHost.Height;
+
+        if (w <= 0 || h <= 0)
+        {
+            _logger.LogTrace("SynchronizeWebViewSize: dimensioni BrowserHost non ancora disponibili ({W}x{H}), skip.", w, h);
+            return;
+        }
+
+        _logger.LogTrace("SynchronizeWebViewSize: {W}x{H}", w, h);
+        _browserWebView.WidthRequest  = w;
+        _browserWebView.HeightRequest = h;
     }
 
     private void OnPageSizeChanged(object? sender, EventArgs e)
@@ -160,6 +192,9 @@ public partial class BrowserPage : ContentPage
                     oldWebView.Navigated  -= WebView_Navigated;
                 }
 
+                // Forza le dimensioni esplicite sul widget GTK4 appena creato,
+                // poi invalida il layout per il passo di arrange successivo.
+                SynchronizeWebViewSize();
                 RootGrid.InvalidateMeasure();
                 BrowserHost.InvalidateMeasure();
             });
@@ -225,5 +260,17 @@ public partial class BrowserPage : ContentPage
                     _browserWebView?.CanGoBack    ?? false,
                     _browserWebView?.CanGoForward ?? false);
         });
+    }
+
+    // ── Pulsante "Apri file" ──────────────────────────────────────
+
+    /// <summary>
+    /// Sostituisce l'intera pagina radice con la <see cref="StartupPage"/> per consentire
+    /// l'apertura di un nuovo archivio .pws.
+    /// </summary>
+    private void OnOpenFileClicked(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("BrowserPage.OnOpenFileClicked: torno a StartupPage.");
+        Application.Current!.Windows[0].Page = new NavigationPage(new StartupPage());
     }
 }

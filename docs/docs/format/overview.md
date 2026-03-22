@@ -113,11 +113,18 @@ L'hash `pws:hash` garantisce l'integrità di ogni singolo file:
 
 Il prefisso di lunghezza evita attacchi di forgiatura per concatenazione.
 
+:::info Verifica automatica all'apertura
+`PwsReader` **ricalcola sempre** il Merkle hash dai byte reali nel ZIP e lo
+confronta con il valore `pws:hash` nel JWT. Qualsiasi modifica a qualsiasi file
+— anche su archivi non firmati — produce un `InvalidDataException`.
+Vedi [PwsReader — Tampering detection](./reader#verifica-dellintegrità-dei-file-tampering-detection).
+:::
+
 ## Algoritmi supportati
 
 | Algoritmo | Uso consigliato | Note |
 |-----------|----------------|------|
-| `none` | Sviluppo / debug | Nessuna garanzia di integrità |
+| `none` | Sviluppo / debug | L'integrità dei file è comunque verificata tramite content hash |
 | `HS256` | Pipeline interne | Richiede condivisione del segreto |
 | `ES256` | Distribuzione pubblica | Chiave pubblica embedded nel manifest |
 

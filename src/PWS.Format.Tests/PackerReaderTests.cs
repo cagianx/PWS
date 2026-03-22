@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using PWS.Format.Crypto;
 using PWS.Format.Packing;
@@ -356,6 +357,166 @@ public sealed class PackerReaderTests
 
         Assert.Throws<KeyNotFoundException>(() =>
             reader.FileSystem.OpenSiteFile("nonexistent", "index.html"));
+    }
+
+    // ── Tampering detection ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns a copy of <paramref name="packed"/> where the ZIP entry at
+    /// <paramref name="archivePath"/> has been replaced with <paramref name="newContent"/>.
+    /// </summary>
+    private static MemoryStream TamperFile(MemoryStream packed, string archivePath, byte[] newContent)
+    {
+        var tampered = new MemoryStream();
+        tampered.Write(packed.ToArray());
+        tampered.Position = 0;
+
+        using (var zip = new ZipArchive(tampered, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var existing = zip.GetEntry(archivePath)
+                ?? throw new InvalidOperationException($"Entry '{archivePath}' not found in archive.");
+            existing.Delete();
+
+            var newEntry = zip.CreateEntry(archivePath, CompressionLevel.Optimal);
+            using var s  = newEntry.Open();
+            s.Write(newContent);
+        }
+
+        tampered.Position = 0;
+        return tampered;
+    }
+
+    /// <summary>
+    /// Returns a copy of <paramref name="packed"/> with an extra file added under
+    /// <paramref name="archivePath"/>.
+    /// </summary>
+    private static MemoryStream TamperAddFile(MemoryStream packed, string archivePath, byte[] content)
+    {
+        var tampered = new MemoryStream();
+        tampered.Write(packed.ToArray());
+        tampered.Position = 0;
+
+        using (var zip = new ZipArchive(tampered, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var newEntry = zip.CreateEntry(archivePath, CompressionLevel.Optimal);
+            using var s  = newEntry.Open();
+            s.Write(content);
+        }
+
+        tampered.Position = 0;
+        return tampered;
+    }
+
+    [Fact]
+    public async Task Tamper_None_FileContentChanged_Throws()
+    {
+        // Pack an unsigned archive, then modify a file byte-by-byte.
+        var ms = await PackAsync(new PwsPackOptions { Sites = [MakeSite()] });
+
+        var tampered = TamperFile(ms, "sites/docs/index.html",
+            Encoding.UTF8.GetBytes("<html>TAMPERED</html>"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered));
+    }
+
+    [Fact]
+    public async Task Tamper_None_FileAdded_Throws()
+    {
+        // Adding an extra file changes the Merkle hash → should be detected.
+        var ms = await PackAsync(new PwsPackOptions { Sites = [MakeSite()] });
+
+        var tampered = TamperAddFile(ms, "sites/docs/extra.js",
+            Encoding.UTF8.GetBytes("alert('injected')"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered));
+    }
+
+    [Fact]
+    public async Task Tamper_Hmac_FileContentChanged_Throws()
+    {
+        // Signed with HMAC; tampering a file should be caught by the content-hash check
+        // (the JWT signature itself remains valid because the token is unchanged).
+        var key = PwsSigningKey.FromHmac("secret");
+        var ms  = await PackAsync(new PwsPackOptions { Sites = [MakeSite()], SigningKey = key });
+
+        var tampered = TamperFile(ms, "sites/docs/assets/main.css",
+            Encoding.UTF8.GetBytes("body { color: red; /* TAMPERED */ }"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered, new PwsOpenOptions { VerificationKey = key }));
+    }
+
+    [Fact]
+    public async Task Tamper_Hmac_FileAdded_Throws()
+    {
+        var key = PwsSigningKey.FromHmac("secret");
+        var ms  = await PackAsync(new PwsPackOptions { Sites = [MakeSite()], SigningKey = key });
+
+        var tampered = TamperAddFile(ms, "sites/docs/inject.html",
+            Encoding.UTF8.GetBytes("<script>evil()</script>"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered, new PwsOpenOptions { VerificationKey = key }));
+    }
+
+    [Fact]
+    public async Task Tamper_EcDsa_FileContentChanged_Throws()
+    {
+        var (full, _, _) = PwsSigningKey.GenerateEcDsa();
+        var ms = await PackAsync(new PwsPackOptions { Sites = [MakeSite()], SigningKey = full });
+
+        var tampered = TamperFile(ms, "sites/docs/index.html",
+            Encoding.UTF8.GetBytes("<html>TAMPERED</html>"));
+
+        // Public key is embedded → auto-verified; content hash must match.
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered));
+    }
+
+    [Fact]
+    public async Task Tamper_EcDsa_FileAdded_Throws()
+    {
+        var (full, _, _) = PwsSigningKey.GenerateEcDsa();
+        var ms = await PackAsync(new PwsPackOptions { Sites = [MakeSite()], SigningKey = full });
+
+        var tampered = TamperAddFile(ms, "sites/docs/extra.html",
+            Encoding.UTF8.GetBytes("<html>extra</html>"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered));
+    }
+
+    [Fact]
+    public async Task Tamper_MultipleSites_OneSiteOnly_Throws()
+    {
+        // Tamper only one of two sites; the reader should still reject the archive.
+        var (full, _, _) = PwsSigningKey.GenerateEcDsa();
+        var ms = await PackAsync(new PwsPackOptions
+        {
+            Sites      = [MakeSite("docs"), MakeSite("blog")],
+            SigningKey = full,
+        });
+
+        // Tamper the blog site only
+        var tampered = TamperFile(ms, "sites/blog/index.html",
+            Encoding.UTF8.GetBytes("<html>BLOG TAMPERED</html>"));
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            PwsReader.OpenAsync(tampered));
+    }
+
+    [Fact]
+    public async Task NoTamper_ValidArchive_Opens()
+    {
+        // Sanity check: a legitimate archive must still open without errors.
+        var (full, _, _) = PwsSigningKey.GenerateEcDsa();
+        var ms = await PackAsync(new PwsPackOptions { Sites = [MakeSite()], SigningKey = full });
+
+        // Must not throw
+        using var reader = await PwsReader.OpenAsync(ms);
+        Assert.True(reader.Sites[0].IsVerified);
     }
 
     // ── SourceDirectory packing ───────────────────────────────────────────────

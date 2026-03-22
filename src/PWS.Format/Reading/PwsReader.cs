@@ -107,6 +107,20 @@ public sealed class PwsReader : IDisposable
         foreach (var site in manifest.Sites)
             claims.Add(VerifySiteToken(site, verKey, opt));
 
+        // ── Verify content hashes against actual ZIP entries ──────────────────
+        // The JWT (signed or not) embeds pws:hash = Merkle hash of all site files.
+        // We recompute the hash from the actual bytes in the archive to detect any
+        // file-level tampering that would not be caught by the JWT signature alone.
+        foreach (var (site, claim) in manifest.Sites.Zip(claims))
+        {
+            var actualHash = ComputeSiteHash(zip, site.Path);
+            if (actualHash != claim.ContentHash)
+                throw new InvalidDataException(
+                    $"Site '{site.Id}': content hash mismatch. " +
+                    "The archive files do not match the signed hash — " +
+                    "the archive may have been tampered with.");
+        }
+
         return new PwsReader(zip, manifest, claims);
     }
 
@@ -160,5 +174,31 @@ public sealed class PwsReader : IDisposable
 
     private static string GetStr(IReadOnlyDictionary<string, object> d, string key) =>
         d.TryGetValue(key, out var v) ? v.ToString() ?? string.Empty : string.Empty;
+
+    /// <summary>
+    /// Re-computes the Merkle hash of all files stored under <paramref name="prefix"/>
+    /// in the ZIP archive and returns the result in the same <c>"sha256:…"</c> format
+    /// used by <see cref="MerkleHasher"/>.
+    /// </summary>
+    private static string ComputeSiteHash(ZipArchive zip, string prefix)
+    {
+        var files = new List<(string path, byte[] content)>();
+
+        foreach (var entry in zip.Entries)
+        {
+            if (!entry.FullName.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+
+            var rel = entry.FullName[prefix.Length..];
+            if (string.IsNullOrEmpty(rel)) continue; // skip directory sentinel entries
+
+            using var ms  = new MemoryStream();
+            using var src = entry.Open();
+            src.CopyTo(ms);
+            files.Add((rel, ms.ToArray()));
+        }
+
+        return MerkleHasher.Compute(files);
+    }
 }
 

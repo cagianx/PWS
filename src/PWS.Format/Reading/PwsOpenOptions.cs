@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PWS.Format.Crypto;
 
 namespace PWS.Format.Reading;
@@ -18,5 +19,12 @@ public sealed class PwsOpenOptions
     /// Default: <see langword="false"/> — unsigned packages are accepted.
     /// </summary>
     public bool RequireSignedTokens { get; init; }
+
+    /// <summary>
+    /// Optional logger used by <see cref="PwsReader"/> to record warnings and errors
+    /// (e.g. JWT verification failures, content hash mismatches) before throwing.
+    /// When <see langword="null"/> no logging is performed.
+    /// </summary>
+    public ILogger? Logger { get; init; }
 }
 

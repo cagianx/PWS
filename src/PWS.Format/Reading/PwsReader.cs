@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PWS.Format.Crypto;
 using PWS.Format.Filesystem;
 using PWS.Format.Manifest;
@@ -108,17 +109,21 @@ public sealed class PwsReader : IDisposable
             claims.Add(VerifySiteToken(site, verKey, opt));
 
         // ── Verify content hashes against actual ZIP entries ──────────────────
-        // The JWT (signed or not) embeds pws:hash = Merkle hash of all site files.
-        // We recompute the hash from the actual bytes in the archive to detect any
-        // file-level tampering that would not be caught by the JWT signature alone.
         foreach (var (site, claim) in manifest.Sites.Zip(claims))
         {
             var actualHash = ComputeSiteHash(zip, site.Path);
             if (actualHash != claim.ContentHash)
+            {
+                opt.Logger?.LogError(
+                    "Site '{SiteId}': content hash mismatch. " +
+                    "Expected {Expected}, actual {Actual}. The archive may have been tampered with.",
+                    site.Id, claim.ContentHash, actualHash);
+
                 throw new InvalidDataException(
                     $"Site '{site.Id}': content hash mismatch. " +
                     "The archive files do not match the signed hash — " +
                     "the archive may have been tampered with.");
+            }
         }
 
         return new PwsReader(zip, manifest, claims);
@@ -149,13 +154,26 @@ public sealed class PwsReader : IDisposable
         var effectiveKey = verKey ?? PwsSigningKey.None();
 
         if (opt.RequireSignedTokens && effectiveKey.Algorithm == JwtAlgorithm.None)
+        {
+            opt.Logger?.LogWarning(
+                "Site '{SiteId}': unsigned token rejected because RequireSignedTokens = true.",
+                site.Id);
+
             throw new InvalidDataException(
                 $"Site '{site.Id}': unsigned token rejected (RequireSignedTokens = true).");
+        }
 
         if (!effectiveKey.Verify(site.Token, out var raw) || raw is null)
+        {
+            opt.Logger?.LogError(
+                "Site '{SiteId}': JWT token verification failed. " +
+                "The archive may have been tampered with.",
+                site.Id);
+
             throw new InvalidDataException(
                 $"Site '{site.Id}': JWT token verification failed. " +
                 "The archive may have been tampered with.");
+        }
 
         return new SiteClaims
         {

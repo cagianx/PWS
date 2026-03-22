@@ -70,6 +70,67 @@ builder.Services.AddTransient<BrowserViewModel>();
 Il provider composito include sempre `pws://` in-memory e, quando l'utente apre un archivio,
 delegata anche al `PwsContentProvider` corrente esposto da `PwsFileService`.
 
+## Logging — Serilog su file
+
+Il progetto usa **Serilog** come backend concreto di `Microsoft.Extensions.Logging`.
+Tutta la dipendenza da Serilog è confinata in `MauiProgram.cs`; il resto del codice
+(inclusi `PWS.Core` e `PWS.Format`) usa solo `ILogger<T>` astratto.
+
+```
+ILogger<T>           ← usato da NavigationService, BrowserViewModel, PwsReader …
+    │
+    │  Microsoft.Extensions.Logging (astrazione)
+    │
+    └─► Serilog.Extensions.Logging ─► Serilog ─► Serilog.Sinks.File
+                                                       │
+                                              ~/.local/share/PWS/logs/
+                                              pws-20260322.log
+```
+
+### Configurazione (MauiProgram.cs)
+
+```csharp
+var logDir = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "PWS", "logs");
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System",    LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.File(
+        path:                   Path.Combine(logDir, "pws-.log"),
+        rollingInterval:        RollingInterval.Day,
+        retainedFileCountLimit: 7,
+        outputTemplate:         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] " +
+                                "{SourceContext} {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+
+builder.Logging.ClearProviders().AddSerilog(Log.Logger, dispose: true);
+```
+
+### File di log
+
+| Percorso | `~/.local/share/PWS/logs/pws-YYYYMMDD.log` |
+|----------|--------------------------------------------|
+| Rotazione | Giornaliera |
+| Retention | 7 file |
+| Livello minimo | `Debug` (ridotto a `Warning` per namespace Microsoft/System) |
+
+### Cosa viene loggato
+
+| Componente | Evento | Livello |
+|------------|--------|---------|
+| `PwsReader` | JWT verification failed | `Error` |
+| `PwsReader` | Content hash mismatch (file alterati) | `Error` |
+| `PwsReader` | Token unsigned con RequireSignedTokens | `Warning` |
+| `PwsPacker` | Errore durante il packing di un sito | `Error` |
+| `PwsPacker` | Inizio/fine packing | `Info` / `Debug` |
+| `NavigationService` | Nessun provider disponibile per URI | `Warning` |
+| `NavigationService` | Eccezione in FetchAsync | `Error` |
+| `BrowserViewModel` | Eccezione in NavigateTo/GoBack/GoForward/Refresh | `Error` |
+
 ## StartupPage — Apertura archivio .pws
 
 All'avvio l'app mostra una `StartupPage` con un pulsante **Apri file .pws**.

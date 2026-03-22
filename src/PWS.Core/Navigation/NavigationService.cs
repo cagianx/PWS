@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PWS.Core.Abstractions;
 using PWS.Core.Models;
 
@@ -9,12 +10,16 @@ namespace PWS.Core.Navigation;
 /// </summary>
 public sealed class NavigationService : INavigationService
 {
-    private readonly IContentProvider _contentProvider;
-    private readonly NavigationHistory _history = new();
+    private readonly IContentProvider          _contentProvider;
+    private readonly NavigationHistory         _history = new();
+    private readonly ILogger<NavigationService>? _logger;
 
-    public NavigationService(IContentProvider contentProvider)
+    public NavigationService(
+        IContentProvider              contentProvider,
+        ILogger<NavigationService>?   logger = null)
     {
         _contentProvider = contentProvider;
+        _logger          = logger;
     }
 
     public NavigationEntry? Current => _history.Current;
@@ -77,16 +82,19 @@ public sealed class NavigationService : INavigationService
     private async Task<ContentResponse> FetchAsync(Uri uri, CancellationToken cancellationToken)
     {
         if (!_contentProvider.CanHandle(uri))
+        {
+            _logger?.LogWarning("No provider available for URI '{Uri}'.", uri);
             return ContentResponse.Error(404, $"Nessun provider disponibile per '{uri}'");
+        }
 
         try
         {
             return await _contentProvider.GetAsync(ContentRequest.Get(uri), cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            _logger?.LogError(ex, "Error fetching '{Uri}'.", uri);
             return ContentResponse.Error(500, ex.Message);
         }
     }
 }
-

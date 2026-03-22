@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Microsoft.Extensions.Logging;
 using PWS.Core.Abstractions;
 using PWS.Core.Models;
 
@@ -10,7 +11,8 @@ namespace PWS.App.Linux.ViewModels;
 /// </summary>
 public sealed class BrowserViewModel : BaseViewModel
 {
-    private readonly INavigationService _navigation;
+    private readonly INavigationService      _navigation;
+    private readonly ILogger<BrowserViewModel> _logger;
 
     // ── Stato barra indirizzi ────────────────────────────────────────
     private string _addressText = "pws://home";
@@ -68,9 +70,12 @@ public sealed class BrowserViewModel : BaseViewModel
     // ── Cancellation per stop ──────────────────────────────────────
     private CancellationTokenSource? _cts;
 
-    public BrowserViewModel(INavigationService navigation)
+    public BrowserViewModel(
+        INavigationService          navigation,
+        ILogger<BrowserViewModel>   logger)
     {
         _navigation = navigation;
+        _logger     = logger;
 
         NavigateCommand  = new Command<string?>(async url => await NavigateTo(url));
         GoBackCommand    = new Command(async () => await GoBack(),    () => CanGoBack);
@@ -101,27 +106,59 @@ public sealed class BrowserViewModel : BaseViewModel
             await _navigation.NavigateAsync(uri, _cts.Token);
         }
         catch (OperationCanceledException) { /* ignorato */ }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error navigating to '{Uri}'.", uri);
+            StatusMessage = $"Errore: {ex.Message}";
+        }
     }
 
     private async Task GoBack()
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
-        await _navigation.GoBackAsync(_cts.Token);
+        try
+        {
+            await _navigation.GoBackAsync(_cts.Token);
+        }
+        catch (OperationCanceledException) { /* ignorato */ }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error on GoBack.");
+            StatusMessage = $"Errore: {ex.Message}";
+        }
     }
 
     private async Task GoForward()
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
-        await _navigation.GoForwardAsync(_cts.Token);
+        try
+        {
+            await _navigation.GoForwardAsync(_cts.Token);
+        }
+        catch (OperationCanceledException) { /* ignorato */ }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error on GoForward.");
+            StatusMessage = $"Errore: {ex.Message}";
+        }
     }
 
     private async Task Refresh()
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
-        await _navigation.RefreshAsync(_cts.Token);
+        try
+        {
+            await _navigation.RefreshAsync(_cts.Token);
+        }
+        catch (OperationCanceledException) { /* ignorato */ }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error on Refresh.");
+            StatusMessage = $"Errore: {ex.Message}";
+        }
     }
 
     private void Stop()

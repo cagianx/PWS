@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PWS.Format.Crypto;
 using PWS.Format.Manifest;
 
@@ -10,6 +11,16 @@ namespace PWS.Format.Packing;
 /// </summary>
 public sealed class PwsPacker
 {
+    private readonly ILogger<PwsPacker>? _logger;
+
+    /// <param name="logger">
+    /// Optional logger. When provided, pack operations and errors are recorded.
+    /// </param>
+    public PwsPacker(ILogger<PwsPacker>? logger = null)
+    {
+        _logger = logger;
+    }
+
     // ── Public API ───────────────────────────────────────────────────────────
 
     /// <summary>Packs all sites in <paramref name="options"/> into a new file at <paramref name="outputPath"/>.</summary>
@@ -33,14 +44,26 @@ public sealed class PwsPacker
         if (options.Sites.Count == 0)
             throw new ArgumentException("At least one site must be specified.", nameof(options));
 
+        _logger?.LogInformation("Packing {SiteCount} site(s) with algorithm {Algorithm}.",
+            options.Sites.Count, options.SigningKey.Algorithm);
+
         using var zip     = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
         var siteEntries   = new List<SiteManifest>(options.Sites.Count);
 
         foreach (var site in options.Sites)
         {
             ct.ThrowIfCancellationRequested();
-            var entry = await PackSiteAsync(zip, site, options.SigningKey, ct);
-            siteEntries.Add(entry);
+            try
+            {
+                var entry = await PackSiteAsync(zip, site, options.SigningKey, ct);
+                siteEntries.Add(entry);
+                _logger?.LogDebug("Site '{SiteId}' packed successfully.", site.Id);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger?.LogError(ex, "Error packing site '{SiteId}'.", site.Id);
+                throw;
+            }
         }
 
         // Write manifest.json last (after all site files are in the ZIP)
@@ -57,6 +80,8 @@ public sealed class PwsPacker
             manifestStream, manifest,
             new JsonSerializerOptions { WriteIndented = true },
             ct);
+
+        _logger?.LogInformation("Packing complete.");
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -107,4 +132,3 @@ public sealed class PwsPacker
         return new SiteManifest { Id = site.Id, Path = prefix, Token = token };
     }
 }
-

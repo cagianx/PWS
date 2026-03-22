@@ -76,6 +76,30 @@ La verifica del content hash è **incondizionata**: viene eseguita sempre,
 indipendentemente dal fatto che l'archivio sia firmato o meno.
 :::
 
+## Logging delle eccezioni
+
+`PwsReader` usa `ILogger` (Microsoft.Extensions.Logging) passato tramite `PwsOpenOptions.Logger`.
+Questo permette di integrarlo con qualsiasi provider di logging (Serilog, NLog, ecc.)
+senza creare dipendenze concrete nella libreria di formato.
+
+```csharp
+using Microsoft.Extensions.Logging;
+
+ILogger myLogger = loggerFactory.CreateLogger<PwsReader>();
+
+using var reader = await PwsReader.OpenAsync("docs.pws", new PwsOpenOptions
+{
+    RequireSignedTokens = true,
+    Logger = myLogger,            // opzionale — null = nessun log
+});
+```
+
+| Evento | Livello |
+|--------|---------|
+| Token unsigned con `RequireSignedTokens = true` | `Warning` |
+| JWT verification failed | `Error` |
+| Content hash mismatch (file alterati) | `Error` |
+
 ## Filesystem virtuale — listare i file
 
 ```csharp

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Hosting;
 using Platform.Maui.Linux.Gtk4.Hosting;
 using PWS.App.Linux.Services;
@@ -7,6 +8,8 @@ using PWS.Core.Abstractions;
 using PWS.Core.Models;
 using PWS.Core.Navigation;
 using PWS.Core.Providers;
+using Serilog;
+using Serilog.Events;
 
 namespace PWS.App.Linux;
 
@@ -14,9 +17,34 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        // ── Serilog — log su file rotante in ~/.local/share/PWS/logs/ ────────
+        var logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PWS", "logs");
+        Directory.CreateDirectory(logDir);
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System",    LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.File(
+                path:                 Path.Combine(logDir, "pws-.log"),
+                rollingInterval:      RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                outputTemplate:       "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+
+        Log.Information("PWS Browser starting. Log directory: {LogDir}", logDir);
+
         var builder = MauiApp
             .CreateBuilder()
             .UseMauiAppLinuxGtk4<App>();
+
+        // ── Logging: Serilog come provider Microsoft.Extensions.Logging ─────
+        builder.Logging
+            .ClearProviders()
+            .AddSerilog(Log.Logger, dispose: true);
 
         // ── Services ────────────────────────────────────────────────
         // Servizio che mantiene il PwsContentProvider corrente
@@ -82,5 +110,3 @@ public static class MauiProgram
         }
     }
 }
-
-

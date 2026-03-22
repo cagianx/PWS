@@ -237,6 +237,10 @@ http://127.0.0.1:<porta>/index.html
 La `WebView` carica quindi `RenderedUrl` via loopback HTTP, e tutte le richieste successive
 agli asset (`/assets/js/...`, `/assets/css/...`, ecc.) vengono servite dallo stesso bridge.
 
+Su GTK4 il layout della `BrowserPage` deve rimanere **layout-driven**: la `WebView` usa solo
+`HorizontalOptions/VerticalOptions = Fill` e non deve fissare `WidthRequest` / `HeightRequest`,
+altrimenti i resize successivi della finestra possono restare "bloccati" sulla misura iniziale.
+
 **Intercettazione link:**
 ```csharp
 private void WebView_Navigating(object? sender, WebNavigatingEventArgs e)

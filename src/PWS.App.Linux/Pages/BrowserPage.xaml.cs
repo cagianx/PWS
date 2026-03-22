@@ -21,8 +21,6 @@ public partial class BrowserPage : ContentPage
     private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
     private bool _allowOneLoopbackNavigation;
-    private double _lastWidth;
-    private double _lastHeight;
 
     public BrowserPage()
     {
@@ -32,8 +30,6 @@ public partial class BrowserPage : ContentPage
         InitializeComponent();
         _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<BrowserPage>>();
         _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
-
-        SizeChanged += OnPageSizeChanged;
     }
 
     // ── Ciclo di vita ────────────────────────────────────────────
@@ -96,46 +92,6 @@ public partial class BrowserPage : ContentPage
         };
         _browserWebView.Navigating += WebView_Navigating;
         BrowserHost.Content = _browserWebView;
-        ForceBrowserLayout();
-    }
-
-    private void OnPageSizeChanged(object? sender, EventArgs e)
-    {
-        if (Width <= 0 || Height <= 0)
-            return;
-
-        if (Math.Abs(Width - _lastWidth) < 0.5 && Math.Abs(Height - _lastHeight) < 0.5)
-            return;
-
-        _lastWidth = Width;
-        _lastHeight = Height;
-
-        _logger.LogDebug("BrowserPage.SizeChanged: {Width}x{Height}", Width, Height);
-        ForceBrowserLayout();
-    }
-
-    private void ForceBrowserLayout()
-    {
-        Dispatcher.Dispatch(() =>
-        {
-            InvalidateMeasure();
-            RootGrid.InvalidateMeasure();
-            BrowserHost.InvalidateMeasure();
-
-            if (_browserWebView is not null)
-            {
-                _browserWebView.WidthRequest = BrowserHost.Width > 0 ? BrowserHost.Width : -1;
-                _browserWebView.HeightRequest = BrowserHost.Height > 0 ? BrowserHost.Height : -1;
-                _browserWebView.InvalidateMeasure();
-            }
-
-            _logger.LogTrace(
-                "BrowserPage.ForceBrowserLayout: host={HostWidth}x{HostHeight} webView={WebWidth}x{WebHeight}",
-                BrowserHost.Width,
-                BrowserHost.Height,
-                _browserWebView?.Width,
-                _browserWebView?.Height);
-        });
     }
 
     // ── Intercettazione navigazione nella WebView ─────────────────

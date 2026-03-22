@@ -139,6 +139,12 @@ await Navigation.PushAsync(new BrowserPage());
 // BrowserPage.OnAppearing chiama automaticamente vm.NavigateToCurrentSite()
 ```
 
+La `StartupPage` **resta nello stack**: non viene rimossa con `Navigation.RemovePage(...)`.
+Questo è un workaround per un bug di `Platform.Maui.Linux.Gtk4` v0.6.0: il `LayoutHandler`
+aggancia callback di resize alla `GtkWindow` senza de-registrarle correttamente, quindi
+distruggere una pagina può lasciare handler stantii che interferiscono con i resize successivi.
+Per questo motivo il flusso usa solo `PushAsync()` / `PopAsync()`.
+
 Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
 
 ## Server HTTP Loopback per sito
@@ -286,8 +292,19 @@ private void WebView_Navigated(object? sender, WebNavigatedEventArgs e)
 }
 ```
 
-**Workaround resize GTK4:**
+**Resize GTK4 — stato attuale:**
 
-Su GTK4 il widget WebKit può non adattarsi correttamente ai resize successivi della finestra.
-Il code-behind usa un debounce (150 ms) e, se necessario, **ricrea la `WebView`** mantenendo
-l'URL corrente. La nuova istanza si ri-sottoscrive a `Navigating` e `Navigated`.
+Il problema di resize non è nella `WebView` in sé ma nel backend `Platform.Maui.Linux.Gtk4`
+v0.6.0, in particolare in `LayoutHandler`:
+
+- il listener anonimo agganciato a `GtkWindow.OnNotify` non viene rimosso in `DisconnectHandler`;
+- durante `notify::default-width` / `notify::default-height` il backend usa
+  `GetAllocatedWidth()` / `GetAllocatedHeight()`, che possono ancora riflettere la dimensione
+  precedente al momento del callback.
+
+Nel codice applicativo il workaround adottato è conservativo:
+
+- non si usa più la ricreazione della `WebView` al resize;
+- non si distruggono le pagine durante la navigazione (`RemovePage`), per evitare handler GTK4
+  stantii con `VirtualView = null`;
+- il passaggio `StartupPage` ⇄ `BrowserPage` usa solo `PushAsync()` / `PopAsync()`.

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PWS.App.Linux.Pages.BrowserPage"
              Title="PWS Browser"
+             NavigationPage.HasNavigationBar="False"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
     <Grid x:Name="RootGrid"

@@ -110,12 +110,17 @@ public partial class StartupPage : ContentPage
             _logger.LogDebug("StartupPage.OpenBrowserAsync: provider e server loopback registrati (porta={Port}).",
                 pwsFileService.CurrentServer?.Port);
 
-            // Sostituisce l'intera page root con BrowserPage invece di usare
-            // Navigation.PushAsync: in GTK4 le pagine pushed non ricevono gli eventi
-            // di resize della finestra, solo la root page è connessa al GtkWindow.
-            _logger.LogDebug("StartupPage.OpenBrowserAsync: sostituisco Window.Page con BrowserPage (GTK4 resize fix).");
-            Application.Current!.Windows[0].Page = new BrowserPage();
-            _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage impostata come root page.");
+            // Bug GTK4 resize (Platform.Maui.Linux.Gtk4 ≤ 0.6.0):
+            // LayoutHandler.ConnectHandler aggancia una lambda anonima a
+            // GtkWindow.OnNotify che non viene MAI de-registrata. Se la pagina
+            // viene distrutta (RemovePage), il suo LayoutHandler ha VirtualView = null
+            // e la lambda lancia InvalidOperationException al prossimo resize,
+            // abortendo il dispatch del segnale e impedendo il resize delle
+            // pagine successive. Workaround: PushAsync SENZA RemovePage.
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: push BrowserPage (senza RemovePage per bug GTK4 resize).");
+            var browserPage = new BrowserPage();
+            await Navigation.PushAsync(browserPage, animated: false);
+            _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage pushed. StartupPage resta nello stack.");
         }
         catch (Exception ex)
         {

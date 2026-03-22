@@ -25,7 +25,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# ── OS ──────────────────────────────────────────────────────────────
+# ── Artifacts generati ──────────────────────────────────────────────
+# La chiave pubblica ECDSA cambia ad ogni esecuzione di build-docs-pws.sh
+artifacts/docs-pubkey.txt
+
 .DS_Store
 Thumbs.db
 *~

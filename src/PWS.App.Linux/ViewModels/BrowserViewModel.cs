@@ -1,18 +1,17 @@
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using PWS.App.Linux.Services;
-using PWS.Core.Abstractions;
 
 namespace PWS.App.Linux.ViewModels;
 
 /// <summary>
 /// ViewModel principale del browser.
-/// Espone tutto ciò che serve alla UI: barra indirizzi, pulsanti, contenuto.
+/// La navigazione avviene interamente su HTTP loopback: il browser punta direttamente
+/// al <see cref="LoopbackContentServer"/> dedicato al sito aperto.
 /// </summary>
 public sealed class BrowserViewModel : BaseViewModel
 {
-    private readonly INavigationService      _navigation;
-    private readonly LoopbackContentServer   _loopbackContentServer;
+    private readonly PwsFileService _pwsFileService;
     private readonly ILogger<BrowserViewModel> _logger;
 
     // ── Stato barra indirizzi ────────────────────────────────────────
@@ -23,7 +22,7 @@ public sealed class BrowserViewModel : BaseViewModel
         set => SetProperty(ref _addressText, value);
     }
 
-    // ── Pulsanti navigazione ────────────────────────────────────────
+    // ── Pulsanti navigazione ─────────────────────────────────────────
     private bool _canGoBack;
     public bool CanGoBack
     {
@@ -38,38 +37,20 @@ public sealed class BrowserViewModel : BaseViewModel
         private set => SetProperty(ref _canGoForward, value);
     }
 
-    // ── Contenuto caricato ─────────────────────────────────────────
-    private string _pageTitle = string.Empty;
+    // ── Titolo pagina ────────────────────────────────────────────────
+    private string _pageTitle = "PWS Browser";
     public string PageTitle
     {
         get => _pageTitle;
         private set => SetProperty(ref _pageTitle, value);
     }
 
-    private string _htmlContent = string.Empty;
-    /// <summary>HTML da mostrare nella WebView.</summary>
-    public string HtmlContent
-    {
-        get => _htmlContent;
-        private set => SetProperty(ref _htmlContent, value);
-    }
-
-    private string _documentBaseUrl = string.Empty;
-    /// <summary>
-    /// URI del documento corrente usato come base URL della WebView,
-    /// così gli asset relativi e root-relative (es. Docusaurus) vengono risolti
-    /// rispetto a <c>pws://&lt;siteId&gt;/...</c> invece che a <c>about:blank</c>.
-    /// </summary>
-    public string DocumentBaseUrl
-    {
-        get => _documentBaseUrl;
-        private set => SetProperty(ref _documentBaseUrl, value);
-    }
-
+    // ── URL da caricare nella WebView ────────────────────────────────
     private string _renderedUrl = string.Empty;
     /// <summary>
-    /// URL loopback HTTP usato realmente dalla WebView per caricare il documento
-    /// e tutti i suoi asset secondari.
+    /// URL HTTP loopback che la WebView deve caricare.
+    /// Cambia solo per navigazione programmatica (apertura sito, digitazione in barra indirizzi).
+    /// La navigazione tra link interni avviene nativamente nella WebView.
     /// </summary>
     public string RenderedUrl
     {
@@ -77,197 +58,132 @@ public sealed class BrowserViewModel : BaseViewModel
         private set => SetProperty(ref _renderedUrl, value);
     }
 
-    private string _statusMessage = "Inserisci un URI pws://<siteId>/index.html e premi Vai";
+    // ── Barra di stato ───────────────────────────────────────────────
+    private string _statusMessage = "Apri un file .pws per iniziare";
     public string StatusMessage
     {
         get => _statusMessage;
         private set => SetProperty(ref _statusMessage, value);
     }
 
-    // ── Comandi ────────────────────────────────────────────────────
+    // ── Comandi ──────────────────────────────────────────────────────
     public ICommand NavigateCommand { get; }
     public ICommand GoBackCommand { get; }
     public ICommand GoForwardCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand StopCommand { get; }
 
-    // ── Cancellation per stop ──────────────────────────────────────
-    private CancellationTokenSource? _cts;
+    // ── Eventi delegati alla View ─────────────────────────────────────
+    /// <summary>Richiesta di navigare indietro nella WebView.</summary>
+    public event EventHandler? GoBackRequested;
+    /// <summary>Richiesta di navigare avanti nella WebView.</summary>
+    public event EventHandler? GoForwardRequested;
+    /// <summary>Richiesta di ricaricare la pagina corrente nella WebView.</summary>
+    public event EventHandler? ReloadRequested;
 
     public BrowserViewModel(
-        INavigationService          navigation,
-        LoopbackContentServer       loopbackContentServer,
-        ILogger<BrowserViewModel>   logger)
+        PwsFileService           pwsFileService,
+        ILogger<BrowserViewModel> logger)
     {
-        _navigation = navigation;
-        _loopbackContentServer = loopbackContentServer;
-        _logger     = logger;
+        _pwsFileService = pwsFileService;
+        _logger         = logger;
 
-        NavigateCommand  = new Command<string?>(url => _ = NavigateTo(url));
-        GoBackCommand    = new Command(() => _ = GoBack(),    () => CanGoBack);
-        GoForwardCommand = new Command(() => _ = GoForward(), () => CanGoForward);
-        RefreshCommand   = new Command(() => _ = Refresh(),   () => !IsBusy);
+        NavigateCommand  = new Command<string?>(url => NavigateTo(url));
+        GoBackCommand    = new Command(
+            () => GoBackRequested?.Invoke(this, EventArgs.Empty),
+            () => CanGoBack);
+        GoForwardCommand = new Command(
+            () => GoForwardRequested?.Invoke(this, EventArgs.Empty),
+            () => CanGoForward);
+        RefreshCommand   = new Command(
+            () => ReloadRequested?.Invoke(this, EventArgs.Empty),
+            () => !IsBusy);
         StopCommand      = new Command(Stop, () => IsBusy);
 
-        _navigation.Navigating += OnNavigating;
-        _navigation.Navigated  += OnNavigated;
-
-        _logger.LogDebug("BrowserViewModel creato. Startup neutro: nessuna navigazione automatica.");
+        _logger.LogDebug("BrowserViewModel creato.");
     }
 
-    // ── Entry point all'avvio ──────────────────────────────────────
-    public Task InitializeAsync() => NavigateTo("pws://home");
+    // ── API pubblica chiamata da BrowserPage ──────────────────────────
 
-    /// <summary>Naviga ad un URI specifico (usato da codice esterno).</summary>
-    public Task NavigateToUri(string uri) => NavigateTo(uri);
+    /// <summary>
+    /// Naviga al sito correntemente aperto in <see cref="PwsFileService"/>.
+    /// Chiamato da <see cref="Pages.BrowserPage"/> al momento dell'OnAppearing.
+    /// </summary>
+    public void NavigateToCurrentSite()
+    {
+        var server = _pwsFileService.CurrentServer;
+        if (server is null)
+        {
+            StatusMessage = "Apri un file .pws per iniziare";
+            return;
+        }
 
+        _logger.LogDebug("BrowserViewModel.NavigateToCurrentSite: {Url}", server.BaseAddress);
+        NavigateTo(server.BaseAddress);
+    }
 
-    // ── Implementazioni comandi ────────────────────────────────────
-    private async Task NavigateTo(string? url)
+    /// <summary>
+    /// Chiamato da <see cref="Pages.BrowserPage"/> quando WebView inizia a navigare.
+    /// Aggiorna barra indirizzi e stato subito (prima del completamento).
+    /// </summary>
+    public void OnPageNavigating(string url)
+    {
+        AddressText   = url;
+        IsBusy        = true;
+        StatusMessage = "Caricamento…";
+        InvalidateCommands();
+    }
+
+    /// <summary>
+    /// Chiamato da <see cref="Pages.BrowserPage"/> dopo il completamento della navigazione
+    /// (<c>WebView.Navigated</c>). Aggiorna stato, CanGoBack/Forward.
+    /// </summary>
+    public void OnWebViewNavigated(string url, bool canGoBack, bool canGoForward)
+    {
+        AddressText   = url;
+        CanGoBack     = canGoBack;
+        CanGoForward  = canGoForward;
+        IsBusy        = false;
+        StatusMessage = "Completato";
+
+        _logger.LogDebug(
+            "OnWebViewNavigated: url={Url} back={Back} fwd={Fwd}", url, canGoBack, canGoForward);
+        InvalidateCommands();
+    }
+
+    // ── Implementazioni comandi ───────────────────────────────────────
+
+    private void NavigateTo(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            _logger.LogTrace("NavigateTo ignorato: URL vuoto.");
-            StatusMessage = "Inserisci un URI pws:// valido";
+            StatusMessage = "URL non valido";
             return;
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (!uri.Scheme.Equals("http",  StringComparison.OrdinalIgnoreCase) &&
+             !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)))
         {
-            _logger.LogWarning("URI non valido: '{Url}'", url);
-            StatusMessage = $"URI non valido: {url}";
+            _logger.LogWarning("BrowserViewModel.NavigateTo: schema non supportato '{Url}'", url);
+            StatusMessage = $"Schema non supportato. Usa http:// — {url}";
             return;
         }
 
-        _logger.LogDebug("NavigateTo → {Uri}", uri);
+        _logger.LogDebug("BrowserViewModel.NavigateTo → {Url}", url);
 
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        try
-        {
-            await _navigation.NavigateAsync(uri, _cts.Token);
-            _logger.LogDebug("NavigateTo completato: {Uri}", uri);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogDebug("NavigateTo cancellato: {Uri}", uri);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled error navigating to '{Uri}'.", uri);
-            StatusMessage = $"Errore: {ex.Message}";
-        }
-    }
-
-    private async Task GoBack()
-    {
-        _logger.LogDebug("GoBack richiesto.");
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        try
-        {
-            await _navigation.GoBackAsync(_cts.Token);
-        }
-        catch (OperationCanceledException) { /* ignorato */ }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled error on GoBack.");
-            StatusMessage = $"Errore: {ex.Message}";
-        }
-    }
-
-    private async Task GoForward()
-    {
-        _logger.LogDebug("GoForward richiesto.");
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        try
-        {
-            await _navigation.GoForwardAsync(_cts.Token);
-        }
-        catch (OperationCanceledException) { /* ignorato */ }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled error on GoForward.");
-            StatusMessage = $"Errore: {ex.Message}";
-        }
-    }
-
-    private async Task Refresh()
-    {
-        _logger.LogDebug("Refresh richiesto.");
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        try
-        {
-            await _navigation.RefreshAsync(_cts.Token);
-        }
-        catch (OperationCanceledException) { /* ignorato */ }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled error on Refresh.");
-            StatusMessage = $"Errore: {ex.Message}";
-        }
+        AddressText   = url;
+        IsBusy        = true;
+        StatusMessage = "Caricamento…";
+        RenderedUrl   = url;        // scatena PropertyChanged → BrowserPage carica la WebView
     }
 
     private void Stop()
     {
         _logger.LogDebug("Stop richiesto.");
-        _cts?.Cancel();
-        IsBusy = false;
+        IsBusy        = false;
         StatusMessage = "Interrotto";
-    }
-
-    // ── Gestione eventi di navigazione ────────────────────────────
-    private void OnNavigating(object? sender, Core.Abstractions.NavigationEventArgs e)
-    {
-        _logger.LogDebug("OnNavigating → {Uri}", e.Entry.Uri);
-        IsBusy = true;
-        AddressText = e.Entry.Uri.ToString();
-        StatusMessage = $"Caricamento {e.Entry.Uri}…";
-        RefreshNavButtons();
         InvalidateCommands();
-    }
-
-    private void OnNavigated(object? sender, Core.Abstractions.NavigationEventArgs e)
-    {
-        IsBusy = false;
-        AddressText = e.Entry.Uri.ToString();
-        PageTitle   = e.Entry.Title ?? e.Entry.Uri.Host;
-        DocumentBaseUrl = e.Entry.Uri.ToString();
-        RenderedUrl = _loopbackContentServer.GetUrlFor(e.Entry.Uri);
-
-        var ok = e.Response?.IsSuccess == true;
-        StatusMessage = ok ? "Completato" : $"Errore {e.Response?.StatusCode}";
-
-        _logger.LogDebug("OnNavigated ← {Uri}  status={Status}  hasResponse={HasResp}",
-            e.Entry.Uri, e.Response?.StatusCode, e.Response is not null);
-        _logger.LogDebug("DocumentBaseUrl set: {BaseUrl}", DocumentBaseUrl);
-        _logger.LogDebug("RenderedUrl set: {Url}", RenderedUrl);
-
-        if (e.Response is { } resp)
-        {
-            _logger.LogTrace("OnNavigated: inizio lettura stream per {Uri}", e.Entry.Uri);
-            using var reader = new StreamReader(resp.Content,
-                System.Text.Encoding.UTF8, leaveOpen: true);
-            HtmlContent = reader.ReadToEnd();
-
-            _logger.LogDebug("HtmlContent set: {Len} chars  (ok={Ok})",
-                HtmlContent.Length, ok);
-        }
-        else
-        {
-            _logger.LogWarning("OnNavigated: Response è null per {Uri}", e.Entry.Uri);
-        }
-
-        RefreshNavButtons();
-        InvalidateCommands();
-    }
-
-    private void RefreshNavButtons()
-    {
-        CanGoBack    = _navigation.CanGoBack;
-        CanGoForward = _navigation.CanGoForward;
     }
 
     private void InvalidateCommands()

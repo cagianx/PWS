@@ -10,9 +10,9 @@ namespace PWS.App.Linux.Pages;
 
 /// <summary>
 /// Code-behind di BrowserPage.
-/// Gestisce la sincronizzazione tra BrowserViewModel e la WebView GTK4:
-///  – aggiorna la Source della WebView quando HtmlContent cambia
-///  – intercetta i click sui link e li reindirizza al NavigationService
+/// La navigazione avviene interamente su HTTP loopback: tutti gli URL del sito corrente
+/// vengono serviti dal <see cref="LoopbackContentServer"/> dedicato.
+/// Il codice-behind è il solo punto in cui si tocca la WebView MAUI.
 /// </summary>
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class BrowserPage : ContentPage
@@ -20,16 +20,12 @@ public partial class BrowserPage : ContentPage
     private bool _bindingDone;
     private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
-    private bool _allowOneLoopbackNavigation;
     private CancellationTokenSource? _resizeWorkaroundCts;
     private double _lastResizeWidth;
     private double _lastResizeHeight;
 
     public BrowserPage()
     {
-        // Costruttore minimo: solo InitializeComponent.
-        // BindingContext e sottoscrizione agli eventi del VM vengono assegnati
-        // in OnAppearing, dopo che GTK4 ha realizzato tutti i widget nativi.
         InitializeComponent();
         _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<BrowserPage>>();
         _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
@@ -47,18 +43,23 @@ public partial class BrowserPage : ContentPage
         if (_bindingDone) return;
         _bindingDone = true;
 
-        // GTK4 realizza i widget nativi (GtkEntry, WebKitWebView…) in modo
-        // asincrono rispetto al ciclo di vita MAUI. Task.Delay(100) cede il
-        // controllo al GLib main loop per almeno un frame GTK (~16 ms) più
-        // un margine sufficiente a completare la widget-realization prima di
-        // toccare qualsiasi widget nativo via binding.
+        // GTK4 realizza i widget nativi in modo asincrono rispetto al ciclo di vita MAUI.
         _logger.LogTrace("BrowserPage.OnAppearing: attendo 100ms prima di assegnare il BindingContext.");
         await Task.Delay(100);
 
         var vm = IPlatformApplication.Current!.Services.GetRequiredService<BrowserViewModel>();
         BindingContext = vm;
         vm.PropertyChanged += OnViewModelPropertyChanged;
+
+        // Collega i comandi del VM alle operazioni native della WebView
+        vm.GoBackRequested    += (_, _) => _browserWebView?.GoBack();
+        vm.GoForwardRequested += (_, _) => _browserWebView?.GoForward();
+        vm.ReloadRequested    += (_, _) => _browserWebView?.Reload();
+
         _logger.LogDebug("BrowserPage.OnAppearing: BindingContext assegnato a BrowserViewModel.");
+
+        // Avvia subito la navigazione al sito aperto (se presente)
+        vm.NavigateToCurrentSite();
     }
 
     // ── Sincronizzazione ViewModel → WebView ─────────────────────
@@ -77,7 +78,6 @@ public partial class BrowserPage : ContentPage
         Dispatcher.Dispatch(() =>
         {
             EnsureWebView();
-            _allowOneLoopbackNavigation = true;
             _logger.LogDebug("BrowserPage: carico RenderedUrl nella WebView: {Url}", vm.RenderedUrl);
             _browserWebView!.Source = new UrlWebViewSource { Url = vm.RenderedUrl };
         });
@@ -93,9 +93,10 @@ public partial class BrowserPage : ContentPage
         _browserWebView = new WebView
         {
             HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
+            VerticalOptions   = LayoutOptions.Fill,
         };
         _browserWebView.Navigating += WebView_Navigating;
+        _browserWebView.Navigated  += WebView_Navigated;
         BrowserHost.Content = _browserWebView;
     }
 
@@ -107,14 +108,11 @@ public partial class BrowserPage : ContentPage
         if (Math.Abs(Width - _lastResizeWidth) < 1 && Math.Abs(Height - _lastResizeHeight) < 1)
             return;
 
-        _lastResizeWidth = Width;
+        _lastResizeWidth  = Width;
         _lastResizeHeight = Height;
 
         _logger.LogDebug("BrowserPage.SizeChanged: {Width}x{Height}", Width, Height);
 
-        // Workaround GTK4/WebKit: su alcune build il widget nativo non segue bene i
-        // resize successivi della finestra. Debounce e ricreazione della WebView
-        // preservando l'URL corrente.
         _resizeWorkaroundCts?.Cancel();
         _resizeWorkaroundCts = new CancellationTokenSource();
         _ = ApplyResizeWorkaroundAsync(_resizeWorkaroundCts.Token);
@@ -141,23 +139,26 @@ public partial class BrowserPage : ContentPage
                 }
 
                 var currentUrl = currentSource.Url;
-                _logger.LogDebug("BrowserPage.ApplyResizeWorkaround: ricreo WebView per adattarla al resize. Url={Url}", currentUrl);
+                _logger.LogDebug(
+                    "BrowserPage.ApplyResizeWorkaround: ricreo WebView. Url={Url}", currentUrl);
 
                 var oldWebView = _browserWebView;
 
                 _browserWebView = new WebView
                 {
                     HorizontalOptions = LayoutOptions.Fill,
-                    VerticalOptions = LayoutOptions.Fill,
-                    Source = new UrlWebViewSource { Url = currentUrl },
+                    VerticalOptions   = LayoutOptions.Fill,
+                    Source            = new UrlWebViewSource { Url = currentUrl },
                 };
-
-                _allowOneLoopbackNavigation = true;
                 _browserWebView.Navigating += WebView_Navigating;
+                _browserWebView.Navigated  += WebView_Navigated;
                 BrowserHost.Content = _browserWebView;
 
                 if (oldWebView is not null)
+                {
                     oldWebView.Navigating -= WebView_Navigating;
+                    oldWebView.Navigated  -= WebView_Navigated;
+                }
 
                 RootGrid.InvalidateMeasure();
                 BrowserHost.InvalidateMeasure();
@@ -173,46 +174,56 @@ public partial class BrowserPage : ContentPage
         }
     }
 
-    // ── Intercettazione navigazione nella WebView ─────────────────
+    // ── Gestione navigazione WebView ──────────────────────────────
 
+    /// <summary>
+    /// Permette tutte le navigazioni verso il server loopback del sito corrente;
+    /// blocca qualsiasi altro URL (http/https esterno, schemi sconosciuti, ecc.).
+    /// </summary>
     private void WebView_Navigating(object? sender, WebNavigatingEventArgs e)
     {
         var url = e.Url ?? string.Empty;
         _logger.LogTrace("BrowserPage.WebView_Navigating: url='{Url}'", url);
 
-        var loopbackServer = IPlatformApplication.Current!.Services.GetRequiredService<LoopbackContentServer>();
-
-        // Permette una singola navigazione loopback quando la Source viene impostata dal codice.
-        if (_allowOneLoopbackNavigation && url.StartsWith(loopbackServer.BaseAddress, StringComparison.OrdinalIgnoreCase))
-        {
-            _allowOneLoopbackNavigation = false;
-            _logger.LogDebug("BrowserPage.WebView_Navigating: permetto la navigazione loopback iniziale '{Url}'.", url);
-            return;
-        }
-
         if (url.StartsWith("about:", StringComparison.OrdinalIgnoreCase)) return;
         if (url.StartsWith("data:",  StringComparison.OrdinalIgnoreCase)) return;
 
-        if (loopbackServer.TryMapLoopbackUrlToPwsUri(url, out var pwsUri))
+        var pwsFileService = IPlatformApplication.Current!.Services.GetRequiredService<PwsFileService>();
+        var server         = pwsFileService.CurrentServer;
+
+        // Permetti TUTTA la navigazione verso il server loopback del sito corrente
+        if (server is not null &&
+            url.StartsWith(server.BaseAddress, StringComparison.OrdinalIgnoreCase))
         {
-            e.Cancel = true;
-            _logger.LogDebug("BrowserPage.WebView_Navigating: loopback '{Url}' -> '{PwsUri}'", url, pwsUri);
+            _logger.LogDebug("BrowserPage.WebView_Navigating: loopback OK → '{Url}'", url);
 
-            if (BindingContext is BrowserViewModel loopbackVm)
-                loopbackVm.NavigateCommand.Execute(pwsUri);
+            // Aggiorna subito la barra indirizzi
+            if (BindingContext is BrowserViewModel vm)
+                Dispatcher.Dispatch(() => vm.OnPageNavigating(url));
 
-            return;
+            return; // lascia navigare la WebView
         }
 
-        if (url.StartsWith("http://",  StringComparison.OrdinalIgnoreCase) ||
-            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            return;
-
-        // Qualsiasi schema non-web (pws://, api://, ecc.) → NavigationService
+        // Tutto il resto viene bloccato (URL esterni, schemi non-http, ecc.)
         e.Cancel = true;
-        _logger.LogDebug("BrowserPage.WebView_Navigating: cancello navigazione WebView e delego al VM per '{Url}'.", url);
+        _logger.LogDebug("BrowserPage.WebView_Navigating: bloccata → '{Url}'", url);
+    }
 
-        if (BindingContext is BrowserViewModel vm)
-            vm.NavigateCommand.Execute(url);
+    /// <summary>
+    /// Aggiorna CanGoBack/CanGoForward nel ViewModel dopo il completamento della navigazione.
+    /// </summary>
+    private void WebView_Navigated(object? sender, WebNavigatedEventArgs e)
+    {
+        _logger.LogDebug(
+            "BrowserPage.WebView_Navigated: url='{Url}' result={Result}", e.Url, e.Result);
+
+        Dispatcher.Dispatch(() =>
+        {
+            if (BindingContext is BrowserViewModel vm)
+                vm.OnWebViewNavigated(
+                    e.Url,
+                    _browserWebView?.CanGoBack    ?? false,
+                    _browserWebView?.CanGoForward ?? false);
+        });
     }
 }

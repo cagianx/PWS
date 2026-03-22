@@ -107,10 +107,10 @@ public partial class StartupPage : ContentPage
                 logFactory.CreateLogger<PwsContentProvider>());
 
             pwsFileService.SetProvider(provider);
-            _logger.LogDebug("StartupPage.OpenBrowserAsync: provider registrato in PwsFileService.");
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: provider e server loopback registrati (porta={Port}).",
+                pwsFileService.CurrentServer?.Port);
 
-            // BrowserPage parte vuoto — nessun URI, nessuna navigazione automatica.
-            // L'utente digita pws://<siteId>/index.html nella barra indirizzi.
+            // Il browser navigherà automaticamente al sito nel suo OnAppearing.
             _logger.LogDebug("StartupPage.OpenBrowserAsync: Navigation.PushAsync(new BrowserPage()).");
             await Navigation.PushAsync(new BrowserPage());
             _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage aperta con successo.");

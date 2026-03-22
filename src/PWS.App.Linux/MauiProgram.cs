@@ -47,9 +47,8 @@ public static class MauiProgram
             .AddSerilog(Log.Logger, dispose: true);
 
         // ── Services ────────────────────────────────────────────────
-        // Servizio che mantiene il PwsContentProvider corrente
+        // Servizio che mantiene il PwsContentProvider e il LoopbackContentServer correnti
         builder.Services.AddSingleton<PwsFileService>();
-        builder.Services.AddSingleton<LoopbackContentServer>();
         builder.Services.AddSingleton<IPwsArchivePicker, GtkPwsArchivePicker>();
         builder.Services.AddSingleton<ErrorDialogService>();
 
@@ -76,9 +75,6 @@ public static class MauiProgram
 
         var app = builder.Build();
 
-        // Avvio eager del loopback server: la WebView caricherà i documenti pws://
-        // tramite HTTP locale per permettere anche il fetch degli asset secondari.
-        _ = app.Services.GetRequiredService<LoopbackContentServer>();
 
         return app;
     }

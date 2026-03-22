@@ -58,7 +58,7 @@
                    HorizontalOptions="Fill"
                    VerticalOptions="Center"
                    Margin="4,0"
-                   Placeholder="pws://..." />
+                   Placeholder="http://127.0.0.1:…" />
 
             <!-- Pulsante Vai -->
             <Button Grid.Column="5"

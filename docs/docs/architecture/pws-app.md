@@ -26,9 +26,10 @@ PWS.App.Linux/
 │   ├── BrowserPage.xaml      ← UI: toolbar + WebView + status bar
 │   └── BrowserPage.xaml.cs   ← code-behind
 ├── Services/
-│   ├── IPwsArchivePicker.cs   ← astrazione chooser archivio
-│   ├── GtkPwsArchivePicker.cs ← Gtk.FileDialog nativo Linux
-│   └── PwsFileService.cs      ← mantiene il PwsContentProvider corrente
+│   ├── IPwsArchivePicker.cs    ← astrazione chooser archivio
+│   ├── GtkPwsArchivePicker.cs  ← Gtk.FileDialog nativo Linux
+│   ├── PwsFileService.cs       ← mantiene provider + LoopbackContentServer correnti
+│   └── LoopbackContentServer.cs← server HTTP su loopback dedicato per sito
 └── ViewModels/
     ├── BaseViewModel.cs       ← INotifyPropertyChanged helper
     └── BrowserViewModel.cs    ← stato e comandi del browser
@@ -54,21 +55,11 @@ public class Program : GtkMauiApplication
 ```csharp
 builder.Services.AddSingleton<PwsFileService>();
 builder.Services.AddSingleton<IPwsArchivePicker, GtkPwsArchivePicker>();
-
-builder.Services.AddSingleton<InMemoryContentProvider>(_ =>
-    new InMemoryContentProvider("pws"));
-
-builder.Services.AddSingleton<IContentProvider>(sp =>
-    new DynamicCompositeContentProvider(
-        sp.GetRequiredService<InMemoryContentProvider>(),
-        sp.GetRequiredService<PwsFileService>()));
-
-builder.Services.AddSingleton<INavigationService, NavigationService>();
 builder.Services.AddTransient<BrowserViewModel>();
 ```
 
-Il provider composito include sempre `pws://` in-memory e, quando l'utente apre un archivio,
-delegata anche al `PwsContentProvider` corrente esposto da `PwsFileService`.
+Il `LoopbackContentServer` **non è più un singleton**: viene creato da `PwsFileService.SetProvider()`
+ogni volta che viene aperto un nuovo archivio `.pws`, su una porta TCP casuale dedicata al sito.
 
 ## Logging — Serilog su file
 
@@ -77,7 +68,7 @@ Tutta la dipendenza da Serilog è confinata in `MauiProgram.cs`; il resto del co
 (inclusi `PWS.Core` e `PWS.Format`) usa solo `ILogger<T>` astratto.
 
 ```
-ILogger<T>           ← usato da NavigationService, BrowserViewModel, PwsReader …
+ILogger<T>           ← usato da BrowserViewModel, PwsReader, PwsFileService …
     │
     │  Microsoft.Extensions.Logging (astrazione)
     │
@@ -90,21 +81,14 @@ ILogger<T>           ← usato da NavigationService, BrowserViewModel, PwsReader
 ### Configurazione (MauiProgram.cs)
 
 ```csharp
-var logDir = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "PWS", "logs");
-
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Verbose()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System",    LogEventLevel.Warning)
-    .Enrich.FromLogContext()
     .WriteTo.File(
         path:                   Path.Combine(logDir, "pws-.log"),
         rollingInterval:        RollingInterval.Day,
-        retainedFileCountLimit: 7,
-        outputTemplate:         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] " +
-                                "{SourceContext} {Message:lj}{NewLine}{Exception}")
+        retainedFileCountLimit: 7)
     .CreateLogger();
 
 builder.Logging.ClearProviders().AddSerilog(Log.Logger, dispose: true);
@@ -124,17 +108,12 @@ builder.Logging.ClearProviders().AddSerilog(Log.Logger, dispose: true);
 |------------|--------|---------|
 | `PwsReader` | JWT verification failed | `Error` |
 | `PwsReader` | Content hash mismatch (file alterati) | `Error` |
-| `PwsReader` | Token unsigned con RequireSignedTokens | `Warning` |
 | `PwsPacker` | Errore durante il packing di un sito | `Error` |
-| `PwsPacker` | Inizio/fine packing | `Info` / `Debug` |
-| `StartupPage` | pick file, apertura reader, verifica sito, apertura browser | `Debug` / `Info` / `Error` |
-| `PwsFileService` | sostituzione provider corrente | `Debug` / `Info` |
-| `DynamicCompositeContentProvider` | scelta provider (`PwsContentProvider` vs `InMemory`) | `Trace` / `Debug` |
-| `NavigationService` | sequenza NavigateAsync / FetchAsync / eventi | `Trace` / `Debug` |
-| `NavigationService` | Eccezione in FetchAsync | `Error` |
-| `PwsContentProvider` | `CanHandle`, `GetAsync`, `Dispose` | `Trace` / `Debug` / `Warning` / `Error` |
+| `StartupPage` | pick file, apertura reader, verifica sito | `Debug` / `Info` / `Error` |
+| `PwsFileService` | sostituzione provider, avvio server loopback | `Debug` / `Info` |
+| `LoopbackContentServer` | avvio, richieste HTTP, risposta | `Info` / `Trace` / `Debug` |
 | `BrowserPage` | lifecycle, attach BindingContext, update WebView | `Debug` / `Trace` |
-| `BrowserViewModel` | richieste Navigate/Back/Forward/Refresh, lettura HTML | `Trace` / `Debug` / `Error` |
+| `BrowserViewModel` | Navigate, NavigateToCurrentSite, OnWebViewNavigated | `Trace` / `Debug` |
 
 ## StartupPage — Apertura archivio .pws
 
@@ -152,34 +131,85 @@ Flusso:
 var path = await archivePicker.PickAsync();
 var reader = await PwsReader.OpenAsync(path, new PwsOpenOptions { Logger = logger });
 var provider = new PwsContentProvider(reader, defaultSiteId, loggerFactory.CreateLogger<PwsContentProvider>());
+
+// SetProvider() crea automaticamente un LoopbackContentServer su una porta libera
 pwsFileService.SetProvider(provider);
+
 await Navigation.PushAsync(new BrowserPage());
+// BrowserPage.OnAppearing chiama automaticamente vm.NavigateToCurrentSite()
 ```
 
 Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
 
-La `BrowserPage` si apre volutamente **senza navigare**: mostra toolbar + status bar +
-un placeholder centrale. La `WebView` viene creata **lazy** solo quando arriva il primo
-contenuto, così l'apertura della pagina resta il più neutra possibile su GTK4.
+## Server HTTP Loopback per sito
 
-L'utente digita esplicitamente un URI del tipo `pws://<siteId>/index.html` nella barra indirizzi.
+Ogni archivio `.pws` aperto ottiene un **server HTTP dedicato** (`LoopbackContentServer`)
+in ascolto su `http://127.0.0.1:{portaCasuale}/`.
+
+```text
+Apertura docs.pws
+   ↓
+PwsFileService.SetProvider(provider)
+   ↓
+new LoopbackContentServer(provider, "docs", logger)
+   → avvio su http://127.0.0.1:49152/
+
+BrowserPage.OnAppearing
+   ↓
+vm.NavigateToCurrentSite()
+   ↓
+WebView.Source = "http://127.0.0.1:49152/"
+```
+
+Tutte le richieste HTTP verso quel server vengono soddisfatte leggendo il file
+corrispondente dal `PwsContentProvider` tramite l'URI interno `pws://{siteId}/{path}`.
+La barra indirizzi dell'app mostra sempre l'URL HTTP loopback.
+
+### Vantaggi rispetto allo schema `pws://`
+
+| | `pws://` (precedente) | `http://loopback` (attuale) |
+|---|---|---|
+| Asset secondari (JS/CSS/img) | Richiedevano mapping esplicito | Serviti nativamente dalla WebView |
+| Back/Forward | Gestiti da `NavigationService` custom | Gestiti dalla WebView nativa (WebKit) |
+| Barra indirizzi | `pws://siteId/path` | `http://127.0.0.1:{port}/path` |
+| Schema link nei documenti | Solo `pws://` | URL relativi standard (come su un web server reale) |
 
 ## BrowserViewModel
 
 Il ViewModel **non dipende da MAUI Controls**: usa solo `ICommand` e `INotifyPropertyChanged`.
+Non usa più `INavigationService`: la navigazione è gestita dalla WebView nativa tramite
+i server HTTP loopback.
 
 Proprietà esposte alla UI:
 
 | Proprietà | Tipo | Descrizione |
 |-----------|------|-------------|
-| `AddressText` | `string` | URL nella barra degli indirizzi |
-| `HtmlContent` | `string` | HTML della risposta corrente |
-| `RenderedUrl` | `string` | URL loopback HTTP usato realmente dalla WebView |
+| `AddressText` | `string` | URL nella barra degli indirizzi (`http://127.0.0.1:{port}/...`) |
+| `RenderedUrl` | `string` | URL da caricare nella WebView (cambia per navigazione programmatica) |
 | `PageTitle` | `string` | Titolo della pagina corrente |
 | `StatusMessage` | `string` | Messaggio nella status bar |
 | `CanGoBack` | `bool` | Abilita il pulsante Indietro |
 | `CanGoForward` | `bool` | Abilita il pulsante Avanti |
 | `IsBusy` | `bool` | True durante il caricamento |
+
+Il ViewModel espone anche tre **eventi** che il code-behind usa per comandare la WebView:
+
+```csharp
+public event EventHandler? GoBackRequested;
+public event EventHandler? GoForwardRequested;
+public event EventHandler? ReloadRequested;
+```
+
+### Metodi pubblici chiamati da BrowserPage
+
+```csharp
+// Chiamato in OnAppearing: naviga al sito correntemente aperto
+vm.NavigateToCurrentSite();
+
+// Chiamati dalla WebView per aggiornare lo stato nel VM
+vm.OnPageNavigating(url);             // WebView.Navigating
+vm.OnWebViewNavigated(url, back, fwd);// WebView.Navigated
+```
 
 ## BrowserPage.xaml.cs — Code-Behind
 
@@ -187,11 +217,6 @@ Il code-behind è l'**unico** punto dove si tocca la `WebView` MAUI.
 
 **Risoluzione ViewModel da DI (ritardata):**
 ```csharp
-public BrowserPage()
-{
-    InitializeComponent();
-}
-
 protected override async void OnAppearing()
 {
     base.OnAppearing();
@@ -201,14 +226,21 @@ protected override async void OnAppearing()
         .GetRequiredService<BrowserViewModel>();
     BindingContext = vm;
     vm.PropertyChanged += OnViewModelPropertyChanged;
+
+    // Collega gli eventi VM → operazioni native della WebView
+    vm.GoBackRequested    += (_, _) => _browserWebView?.GoBack();
+    vm.GoForwardRequested += (_, _) => _browserWebView?.GoForward();
+    vm.ReloadRequested    += (_, _) => _browserWebView?.Reload();
+
+    vm.NavigateToCurrentSite(); // avvia la navigazione al sito aperto
 }
 ```
 
-Shell crea le pagine via reflection (non constructor-injection), quindi si usa
-il service-locator pattern. Il binding viene assegnato in `OnAppearing()` per
-evitare di toccare i widget GTK troppo presto.
+**Aggiornamento WebView lazy (navigazione programmatica):**
 
-**Aggiornamento WebView lazy:**
+La `WebView` viene creata lazy al primo contenuto. Quando `RenderedUrl` cambia nel VM,
+il code-behind imposta `webView.Source`:
+
 ```csharp
 private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
 {
@@ -221,41 +253,41 @@ private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs
 }
 ```
 
-La `WebView` non è più istanziata direttamente in XAML. Al suo posto c'è un `ContentView`
-placeholder (`BrowserHost`) che viene sostituito dalla `WebView` solo al primo contenuto.
+**Intercettazione navigazione (`WebView.Navigating`):**
 
-Per siti statici complessi come Docusaurus, l'HTML inline non basta perché la pagina deve
-caricare anche JS/CSS/immagini secondari. Per questo la app usa un piccolo server HTTP locale
-(`LoopbackContentServer`) che serve i file del `.pws` dal `PwsContentProvider` corrente:
-
-```text
-pws://docs/index.html
-   ↓ mappatura interna
-http://127.0.0.1:<porta>/index.html
-```
-
-La `WebView` carica quindi `RenderedUrl` via loopback HTTP, e tutte le richieste successive
-agli asset (`/assets/js/...`, `/assets/css/...`, ecc.) vengono servite dallo stesso bridge.
-
-Su GTK4 il layout della `BrowserPage` deve rimanere **layout-driven**: la `WebView` usa solo
-`HorizontalOptions/VerticalOptions = Fill` e non deve fissare `WidthRequest` / `HeightRequest`,
-altrimenti i resize successivi della finestra possono restare "bloccati" sulla misura iniziale.
-
-In aggiunta, la versione Linux/GTK4 applica un workaround pragmatico: dopo un resize della
-finestra, la `BrowserPage` esegue un debounce e, se necessario, **ricrea la WebView** mantenendo
-la stessa `RenderedUrl`. Questo aggira i casi in cui il widget nativo WebKit non si riadatta
-correttamente ai resize successivi pur restando in un layout `Fill`.
-
-**Intercettazione link:**
 ```csharp
 private void WebView_Navigating(object? sender, WebNavigatingEventArgs e)
 {
-    // Schemi custom → NavigationService (non la WebView)
-    if (!e.Url.StartsWith("http") && !e.Url.StartsWith("about") && ...)
-    {
-        e.Cancel = true;
-        vm.NavigateCommand.Execute(e.Url);
-    }
+    // about: e data: sempre consentiti
+    if (url.StartsWith("about:") || url.StartsWith("data:")) return;
+
+    var server = pwsFileService.CurrentServer;
+
+    // Permetti TUTTO il loopback del sito corrente → WebKit gestisce storia nativa
+    if (server != null && url.StartsWith(server.BaseAddress)) return;
+
+    // Blocca tutto il resto (URL esterni, schemi sconosciuti)
+    e.Cancel = true;
 }
 ```
 
+La WebView naviga liberamente tra gli URL del server loopback corrente;
+i link verso altri domini vengono bloccati.
+
+**Aggiornamento stato dopo navigazione (`WebView.Navigated`):**
+
+```csharp
+private void WebView_Navigated(object? sender, WebNavigatedEventArgs e)
+{
+    Dispatcher.Dispatch(() =>
+        vm.OnWebViewNavigated(e.Url,
+            _browserWebView?.CanGoBack ?? false,
+            _browserWebView?.CanGoForward ?? false));
+}
+```
+
+**Workaround resize GTK4:**
+
+Su GTK4 il widget WebKit può non adattarsi correttamente ai resize successivi della finestra.
+Il code-behind usa un debounce (150 ms) e, se necessario, **ricrea la `WebView`** mantenendo
+l'URL corrente. La nuova istanza si ri-sottoscrive a `Navigating` e `Navigated`.

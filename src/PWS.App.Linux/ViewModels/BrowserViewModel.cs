@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
+using PWS.App.Linux.Services;
 using PWS.Core.Abstractions;
 
 namespace PWS.App.Linux.ViewModels;
@@ -11,6 +12,7 @@ namespace PWS.App.Linux.ViewModels;
 public sealed class BrowserViewModel : BaseViewModel
 {
     private readonly INavigationService      _navigation;
+    private readonly LoopbackContentServer   _loopbackContentServer;
     private readonly ILogger<BrowserViewModel> _logger;
 
     // ── Stato barra indirizzi ────────────────────────────────────────
@@ -64,6 +66,17 @@ public sealed class BrowserViewModel : BaseViewModel
         private set => SetProperty(ref _documentBaseUrl, value);
     }
 
+    private string _renderedUrl = string.Empty;
+    /// <summary>
+    /// URL loopback HTTP usato realmente dalla WebView per caricare il documento
+    /// e tutti i suoi asset secondari.
+    /// </summary>
+    public string RenderedUrl
+    {
+        get => _renderedUrl;
+        private set => SetProperty(ref _renderedUrl, value);
+    }
+
     private string _statusMessage = "Inserisci un URI pws://<siteId>/index.html e premi Vai";
     public string StatusMessage
     {
@@ -83,9 +96,11 @@ public sealed class BrowserViewModel : BaseViewModel
 
     public BrowserViewModel(
         INavigationService          navigation,
+        LoopbackContentServer       loopbackContentServer,
         ILogger<BrowserViewModel>   logger)
     {
         _navigation = navigation;
+        _loopbackContentServer = loopbackContentServer;
         _logger     = logger;
 
         NavigateCommand  = new Command<string?>(url => _ = NavigateTo(url));
@@ -220,6 +235,7 @@ public sealed class BrowserViewModel : BaseViewModel
         AddressText = e.Entry.Uri.ToString();
         PageTitle   = e.Entry.Title ?? e.Entry.Uri.Host;
         DocumentBaseUrl = e.Entry.Uri.ToString();
+        RenderedUrl = _loopbackContentServer.GetUrlFor(e.Entry.Uri);
 
         var ok = e.Response?.IsSuccess == true;
         StatusMessage = ok ? "Completato" : $"Errore {e.Response?.StatusCode}";
@@ -227,6 +243,7 @@ public sealed class BrowserViewModel : BaseViewModel
         _logger.LogDebug("OnNavigated ← {Uri}  status={Status}  hasResponse={HasResp}",
             e.Entry.Uri, e.Response?.StatusCode, e.Response is not null);
         _logger.LogDebug("DocumentBaseUrl set: {BaseUrl}", DocumentBaseUrl);
+        _logger.LogDebug("RenderedUrl set: {Url}", RenderedUrl);
 
         if (e.Response is { } resp)
         {

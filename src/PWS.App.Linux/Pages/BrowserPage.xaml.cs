@@ -20,6 +20,9 @@ public partial class BrowserPage : ContentPage
     private bool _bindingDone;
     private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
+    private bool _allowOneLoopbackNavigation;
+    private double _lastWidth;
+    private double _lastHeight;
 
     public BrowserPage()
     {
@@ -29,6 +32,8 @@ public partial class BrowserPage : ContentPage
         InitializeComponent();
         _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<BrowserPage>>();
         _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
+
+        SizeChanged += OnPageSizeChanged;
     }
 
     // ── Ciclo di vita ────────────────────────────────────────────
@@ -60,22 +65,20 @@ public partial class BrowserPage : ContentPage
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         _logger.LogTrace("BrowserPage.OnViewModelPropertyChanged: {Property}", e.PropertyName);
-        if (e.PropertyName != nameof(BrowserViewModel.HtmlContent)) return;
         if (sender is not BrowserViewModel vm) return;
+
+        if (e.PropertyName != nameof(BrowserViewModel.RenderedUrl))
+            return;
+
+        if (string.IsNullOrWhiteSpace(vm.RenderedUrl))
+            return;
 
         Dispatcher.Dispatch(() =>
         {
             EnsureWebView();
-            _logger.LogDebug(
-                "BrowserPage: aggiorno WebView.Source con HtmlContent di {Len} caratteri. BaseUrl={BaseUrl}",
-                vm.HtmlContent.Length,
-                vm.DocumentBaseUrl);
-
-            _browserWebView!.Source = new HtmlWebViewSource
-            {
-                Html = vm.HtmlContent,
-                BaseUrl = vm.DocumentBaseUrl,
-            };
+            _allowOneLoopbackNavigation = true;
+            _logger.LogDebug("BrowserPage: carico RenderedUrl nella WebView: {Url}", vm.RenderedUrl);
+            _browserWebView!.Source = new UrlWebViewSource { Url = vm.RenderedUrl };
         });
     }
 
@@ -86,9 +89,53 @@ public partial class BrowserPage : ContentPage
 
         _logger.LogDebug("BrowserPage.EnsureWebView: creo WebView lazy.");
 
-        _browserWebView = new WebView();
+        _browserWebView = new WebView
+        {
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+        };
         _browserWebView.Navigating += WebView_Navigating;
         BrowserHost.Content = _browserWebView;
+        ForceBrowserLayout();
+    }
+
+    private void OnPageSizeChanged(object? sender, EventArgs e)
+    {
+        if (Width <= 0 || Height <= 0)
+            return;
+
+        if (Math.Abs(Width - _lastWidth) < 0.5 && Math.Abs(Height - _lastHeight) < 0.5)
+            return;
+
+        _lastWidth = Width;
+        _lastHeight = Height;
+
+        _logger.LogDebug("BrowserPage.SizeChanged: {Width}x{Height}", Width, Height);
+        ForceBrowserLayout();
+    }
+
+    private void ForceBrowserLayout()
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            InvalidateMeasure();
+            RootGrid.InvalidateMeasure();
+            BrowserHost.InvalidateMeasure();
+
+            if (_browserWebView is not null)
+            {
+                _browserWebView.WidthRequest = BrowserHost.Width > 0 ? BrowserHost.Width : -1;
+                _browserWebView.HeightRequest = BrowserHost.Height > 0 ? BrowserHost.Height : -1;
+                _browserWebView.InvalidateMeasure();
+            }
+
+            _logger.LogTrace(
+                "BrowserPage.ForceBrowserLayout: host={HostWidth}x{HostHeight} webView={WebWidth}x{WebHeight}",
+                BrowserHost.Width,
+                BrowserHost.Height,
+                _browserWebView?.Width,
+                _browserWebView?.Height);
+        });
     }
 
     // ── Intercettazione navigazione nella WebView ─────────────────
@@ -98,8 +145,29 @@ public partial class BrowserPage : ContentPage
         var url = e.Url ?? string.Empty;
         _logger.LogTrace("BrowserPage.WebView_Navigating: url='{Url}'", url);
 
+        var loopbackServer = IPlatformApplication.Current!.Services.GetRequiredService<LoopbackContentServer>();
+
+        // Permette una singola navigazione loopback quando la Source viene impostata dal codice.
+        if (_allowOneLoopbackNavigation && url.StartsWith(loopbackServer.BaseAddress, StringComparison.OrdinalIgnoreCase))
+        {
+            _allowOneLoopbackNavigation = false;
+            _logger.LogDebug("BrowserPage.WebView_Navigating: permetto la navigazione loopback iniziale '{Url}'.", url);
+            return;
+        }
+
         if (url.StartsWith("about:", StringComparison.OrdinalIgnoreCase)) return;
         if (url.StartsWith("data:",  StringComparison.OrdinalIgnoreCase)) return;
+
+        if (loopbackServer.TryMapLoopbackUrlToPwsUri(url, out var pwsUri))
+        {
+            e.Cancel = true;
+            _logger.LogDebug("BrowserPage.WebView_Navigating: loopback '{Url}' -> '{PwsUri}'", url, pwsUri);
+
+            if (BindingContext is BrowserViewModel loopbackVm)
+                loopbackVm.NavigateCommand.Execute(pwsUri);
+
+            return;
+        }
 
         if (url.StartsWith("http://",  StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))

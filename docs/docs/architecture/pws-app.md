@@ -160,7 +160,7 @@ Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono le
 
 La `BrowserPage` si apre volutamente **senza navigare**: mostra toolbar + status bar +
 un placeholder centrale. La `WebView` viene creata **lazy** solo quando arriva il primo
-`HtmlContent`, così l'apertura della pagina resta il più neutra possibile su GTK4.
+contenuto, così l'apertura della pagina resta il più neutra possibile su GTK4.
 
 L'utente digita esplicitamente un URI del tipo `pws://<siteId>/index.html` nella barra indirizzi.
 
@@ -173,7 +173,8 @@ Proprietà esposte alla UI:
 | Proprietà | Tipo | Descrizione |
 |-----------|------|-------------|
 | `AddressText` | `string` | URL nella barra degli indirizzi |
-| `HtmlContent` | `string` | HTML da mostrare nella WebView |
+| `HtmlContent` | `string` | HTML della risposta corrente |
+| `RenderedUrl` | `string` | URL loopback HTTP usato realmente dalla WebView |
 | `PageTitle` | `string` | Titolo della pagina corrente |
 | `StatusMessage` | `string` | Messaggio nella status bar |
 | `CanGoBack` | `bool` | Abilita il pulsante Indietro |
@@ -211,23 +212,30 @@ evitare di toccare i widget GTK troppo presto.
 ```csharp
 private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
 {
-    if (e.PropertyName == nameof(BrowserViewModel.HtmlContent))
+    if (e.PropertyName == nameof(BrowserViewModel.RenderedUrl))
         Dispatcher.Dispatch(() =>
         {
             EnsureWebView();
-            _browserWebView!.Source = new HtmlWebViewSource
-            {
-                Html = vm.HtmlContent,
-                BaseUrl = vm.DocumentBaseUrl,
-            };
+            _browserWebView!.Source = new UrlWebViewSource { Url = vm.RenderedUrl };
         });
 }
 ```
 
 La `WebView` non è più istanziata direttamente in XAML. Al suo posto c'è un `ContentView`
 placeholder (`BrowserHost`) che viene sostituito dalla `WebView` solo al primo contenuto.
-`BaseUrl` viene impostato a `pws://<siteId>/...` così Docusaurus e gli altri siti statici
-non vengono più eseguiti come `about:blank`.
+
+Per siti statici complessi come Docusaurus, l'HTML inline non basta perché la pagina deve
+caricare anche JS/CSS/immagini secondari. Per questo la app usa un piccolo server HTTP locale
+(`LoopbackContentServer`) che serve i file del `.pws` dal `PwsContentProvider` corrente:
+
+```text
+pws://docs/index.html
+   ↓ mappatura interna
+http://127.0.0.1:<porta>/index.html
+```
+
+La `WebView` carica quindi `RenderedUrl` via loopback HTTP, e tutte le richieste successive
+agli asset (`/assets/js/...`, `/assets/css/...`, ecc.) vengono servite dallo stesso bridge.
 
 **Intercettazione link:**
 ```csharp

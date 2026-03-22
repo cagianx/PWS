@@ -5,13 +5,20 @@
              Title="PWS Browser"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <Grid RowDefinitions="48,*,22">
+    <Grid x:Name="RootGrid"
+          RowDefinitions="Auto,*,Auto"
+          RowSpacing="0"
+          ColumnSpacing="0"
+          HorizontalOptions="Fill"
+          VerticalOptions="Fill">
 
         <!-- ── Toolbar ──────────────────────────────────────────── -->
         <Grid Grid.Row="0"
               ColumnDefinitions="40,40,40,40,*,70"
               BackgroundColor="{StaticResource ToolbarBackgroundColor}"
-              Padding="4,4">
+              Padding="4,4"
+              HorizontalOptions="Fill"
+              VerticalOptions="Start">
 
             <!-- Indietro -->
             <Button Grid.Column="0"
@@ -48,6 +55,7 @@
                    ReturnCommand="{Binding NavigateCommand}"
                    ReturnCommandParameter="{Binding AddressText}"
                    Keyboard="Url"
+                   HorizontalOptions="Fill"
                    VerticalOptions="Center"
                    Margin="4,0"
                    Placeholder="pws://..." />
@@ -63,8 +71,12 @@
 
         <!-- ── Area contenuto ────────────────────────────────────── -->
         <ContentView Grid.Row="1"
-                     x:Name="BrowserHost">
-            <Grid BackgroundColor="{StaticResource PageBackgroundColor}">
+                     x:Name="BrowserHost"
+                     HorizontalOptions="Fill"
+                     VerticalOptions="Fill">
+            <Grid BackgroundColor="{StaticResource PageBackgroundColor}"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Fill">
                 <Label Text="Nessuna pagina caricata"
                        HorizontalOptions="Center"
                        VerticalOptions="Center"
@@ -78,7 +90,11 @@
                BackgroundColor="{StaticResource StatusBarBackgroundColor}"
                TextColor="{StaticResource SecondaryTextColor}"
                FontSize="11"
-               Padding="8,0"
+               MinimumHeightRequest="24"
+               Padding="8,4"
+               LineBreakMode="TailTruncation"
+               HorizontalOptions="Fill"
+               VerticalOptions="End"
                VerticalTextAlignment="Center" />
 
     </Grid>

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using PWS.App.Linux.Services;
@@ -16,56 +17,54 @@ namespace PWS.App.Linux.Pages;
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class BrowserPage : ContentPage
 {
-    private bool    _initialLoadDone;
-    private string? _initialUri;   // impostato da StartupPage, consumato in OnAppearing
+    private bool _bindingDone;
+    private readonly ILogger<BrowserPage> _logger;
 
-    /// <param name="initialUri">
-    /// URI da aprire subito dopo che la pagina è montata nel widget tree GTK.
-    /// Se <see langword="null"/> viene usata la home <c>pws://home</c>.
-    /// </param>
-    public BrowserPage(string? initialUri = null)
+    public BrowserPage()
     {
+        // Costruttore minimo: solo InitializeComponent.
+        // BindingContext e sottoscrizione agli eventi del VM vengono assegnati
+        // in OnAppearing, dopo che GTK4 ha realizzato tutti i widget nativi.
         InitializeComponent();
-        _initialUri = initialUri;
-
-        var vm = IPlatformApplication.Current!.Services.GetRequiredService<BrowserViewModel>();
-        BindingContext = vm;
-
-        vm.PropertyChanged += OnViewModelPropertyChanged;
+        _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<BrowserPage>>();
+        _logger.LogDebug("BrowserPage ctor: InitializeComponent completato.");
     }
 
     // ── Ciclo di vita ────────────────────────────────────────────
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _logger.LogDebug("BrowserPage.OnAppearing: bindingDone={Done}", _bindingDone);
 
-        if (_initialLoadDone) return;
-        _initialLoadDone = true;
+        if (_bindingDone) return;
+        _bindingDone = true;
 
-        if (BindingContext is not BrowserViewModel vm) return;
+        // GTK4 realizza i widget nativi (GtkEntry, WebKitWebView…) in modo
+        // asincrono rispetto al ciclo di vita MAUI. Task.Delay(100) cede il
+        // controllo al GLib main loop per almeno un frame GTK (~16 ms) più
+        // un margine sufficiente a completare la widget-realization prima di
+        // toccare qualsiasi widget nativo via binding.
+        _logger.LogTrace("BrowserPage.OnAppearing: attendo 100ms prima di assegnare il BindingContext.");
+        await Task.Delay(100);
 
-        // Non navighiamo automaticamente: lasciamo che l'utente prema
-        // Invio o "Vai" dopo che la UI è completamente pronta.
-        // Questo evita qualsiasi problema di timing GTK4 con la widget realization.
-        if (_initialUri is not null)
-        {
-            vm.PreFillAddress(_initialUri);
-            _initialUri = null;
-        }
+        var vm = IPlatformApplication.Current!.Services.GetRequiredService<BrowserViewModel>();
+        BindingContext = vm;
+        vm.PropertyChanged += OnViewModelPropertyChanged;
+        _logger.LogDebug("BrowserPage.OnAppearing: BindingContext assegnato a BrowserViewModel.");
     }
 
     // ── Sincronizzazione ViewModel → WebView ─────────────────────
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        _logger.LogTrace("BrowserPage.OnViewModelPropertyChanged: {Property}", e.PropertyName);
         if (e.PropertyName != nameof(BrowserViewModel.HtmlContent)) return;
         if (sender is not BrowserViewModel vm) return;
 
-        // Usa il Dispatcher della pagina — MainThread.BeginInvokeOnMainThread
-        // non è implementato da Platform.Maui.Linux.Gtk4.Essentials
         Dispatcher.Dispatch(() =>
         {
+            _logger.LogDebug("BrowserPage: aggiorno WebView.Source con HtmlContent di {Len} caratteri.", vm.HtmlContent.Length);
             BrowserWebView.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
         });
     }
@@ -75,19 +74,18 @@ public partial class BrowserPage : ContentPage
     private void WebView_Navigating(object? sender, WebNavigatingEventArgs e)
     {
         var url = e.Url ?? string.Empty;
+        _logger.LogTrace("BrowserPage.WebView_Navigating: url='{Url}'", url);
 
-        // Lascia passare le navigazioni interne di WebKit
         if (url.StartsWith("about:", StringComparison.OrdinalIgnoreCase)) return;
-        if (url.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return;
+        if (url.StartsWith("data:",  StringComparison.OrdinalIgnoreCase)) return;
 
-        // HTTP/HTTPS: al momento li lasciamo passare (in futuro → ApiContentProvider)
-        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+        if (url.StartsWith("http://",  StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             return;
 
-        // Qualsiasi schema non-web (pws://, api://, ecc.) viene gestito
-        // dal NavigationService anziché direttamente dalla WebView
+        // Qualsiasi schema non-web (pws://, api://, ecc.) → NavigationService
         e.Cancel = true;
+        _logger.LogDebug("BrowserPage.WebView_Navigating: cancello navigazione WebView e delego al VM per '{Url}'.", url);
 
         if (BindingContext is BrowserViewModel vm)
             vm.NavigateCommand.Execute(url);

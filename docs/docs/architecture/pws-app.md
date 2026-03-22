@@ -95,7 +95,7 @@ var logDir = Path.Combine(
     "PWS", "logs");
 
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
+    .MinimumLevel.Verbose()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System",    LogEventLevel.Warning)
     .Enrich.FromLogContext()
@@ -116,7 +116,7 @@ builder.Logging.ClearProviders().AddSerilog(Log.Logger, dispose: true);
 |----------|--------------------------------------------|
 | Rotazione | Giornaliera |
 | Retention | 7 file |
-| Livello minimo | `Debug` (ridotto a `Warning` per namespace Microsoft/System) |
+| Livello minimo | `Verbose` (ridotto a `Warning` per namespace Microsoft/System) |
 
 ### Cosa viene loggato
 
@@ -127,9 +127,14 @@ builder.Logging.ClearProviders().AddSerilog(Log.Logger, dispose: true);
 | `PwsReader` | Token unsigned con RequireSignedTokens | `Warning` |
 | `PwsPacker` | Errore durante il packing di un sito | `Error` |
 | `PwsPacker` | Inizio/fine packing | `Info` / `Debug` |
-| `NavigationService` | Nessun provider disponibile per URI | `Warning` |
+| `StartupPage` | pick file, apertura reader, verifica sito, apertura browser | `Debug` / `Info` / `Error` |
+| `PwsFileService` | sostituzione provider corrente | `Debug` / `Info` |
+| `DynamicCompositeContentProvider` | scelta provider (`PwsContentProvider` vs `InMemory`) | `Trace` / `Debug` |
+| `NavigationService` | sequenza NavigateAsync / FetchAsync / eventi | `Trace` / `Debug` |
 | `NavigationService` | Eccezione in FetchAsync | `Error` |
-| `BrowserViewModel` | Eccezione in NavigateTo/GoBack/GoForward/Refresh | `Error` |
+| `PwsContentProvider` | `CanHandle`, `GetAsync`, `Dispose` | `Trace` / `Debug` / `Warning` / `Error` |
+| `BrowserPage` | lifecycle, attach BindingContext, update WebView | `Debug` / `Trace` |
+| `BrowserViewModel` | richieste Navigate/Back/Forward/Refresh, lettura HTML | `Trace` / `Debug` / `Error` |
 
 ## StartupPage — Apertura archivio .pws
 
@@ -145,12 +150,16 @@ Flusso:
 
 ```csharp
 var path = await archivePicker.PickAsync();
-var reader = await PwsReader.OpenAsync(path);
-var provider = new PwsContentProvider(reader, defaultSiteId);
+var reader = await PwsReader.OpenAsync(path, new PwsOpenOptions { Logger = logger });
+var provider = new PwsContentProvider(reader, defaultSiteId, loggerFactory.CreateLogger<PwsContentProvider>());
 pwsFileService.SetProvider(provider);
+await Navigation.PushAsync(new BrowserPage());
 ```
 
 Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
+
+La `BrowserPage` si apre volutamente **senza navigare**: la WebView parte vuota e l'utente
+digita esplicitamente un URI del tipo `pws://<siteId>/index.html` nella barra indirizzi.
 
 ## BrowserViewModel
 
@@ -172,11 +181,18 @@ Proprietà esposte alla UI:
 
 Il code-behind è l'**unico** punto dove si tocca la `WebView` MAUI.
 
-**Risoluzione ViewModel da DI:**
+**Risoluzione ViewModel da DI (ritardata):**
 ```csharp
 public BrowserPage()
 {
     InitializeComponent();
+}
+
+protected override async void OnAppearing()
+{
+    base.OnAppearing();
+    await Task.Delay(100); // lascia completare la widget-realization GTK4
+
     var vm = IPlatformApplication.Current!.Services
         .GetRequiredService<BrowserViewModel>();
     BindingContext = vm;
@@ -185,7 +201,8 @@ public BrowserPage()
 ```
 
 Shell crea le pagine via reflection (non constructor-injection), quindi si usa
-il service-locator pattern.
+il service-locator pattern. Il binding viene assegnato in `OnAppearing()` per
+evitare di toccare i widget GTK troppo presto.
 
 **Aggiornamento WebView:**
 ```csharp

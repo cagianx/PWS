@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Hosting;
 using Platform.Maui.Linux.Gtk4.Hosting;
 using PWS.App.Linux.Services;
 using PWS.App.Linux.ViewModels;
@@ -24,7 +22,7 @@ public static class MauiProgram
         Directory.CreateDirectory(logDir);
 
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            .MinimumLevel.Verbose()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System",    LogEventLevel.Warning)
             .Enrich.FromLogContext()
@@ -64,9 +62,10 @@ public static class MauiProgram
         {
             var inMemoryProvider = sp.GetRequiredService<InMemoryContentProvider>();
             var pwsFileService   = sp.GetRequiredService<PwsFileService>();
+            var logger           = sp.GetRequiredService<ILogger<DynamicCompositeContentProvider>>();
 
             // DynamicCompositeContentProvider che delega a pwsFileService.CurrentProvider
-            return new DynamicCompositeContentProvider(inMemoryProvider, pwsFileService);
+            return new DynamicCompositeContentProvider(inMemoryProvider, pwsFileService, logger);
         });
 
         builder.Services.AddSingleton<INavigationService, NavigationService>();
@@ -85,19 +84,29 @@ public static class MauiProgram
     {
         private readonly InMemoryContentProvider _inMemory;
         private readonly PwsFileService _pwsFileService;
+        private readonly ILogger<DynamicCompositeContentProvider> _logger;
 
         public DynamicCompositeContentProvider(
             InMemoryContentProvider inMemory,
-            PwsFileService pwsFileService)
+            PwsFileService pwsFileService,
+            ILogger<DynamicCompositeContentProvider> logger)
         {
             _inMemory = inMemory;
             _pwsFileService = pwsFileService;
+            _logger = logger;
+            _logger.LogDebug("DynamicCompositeContentProvider creato.");
         }
 
         public bool CanHandle(Uri uri)
         {
-            if (_inMemory.CanHandle(uri)) return true;
-            return _pwsFileService.CurrentProvider?.CanHandle(uri) ?? false;
+            var inMemory = _inMemory.CanHandle(uri);
+            var current  = _pwsFileService.CurrentProvider?.CanHandle(uri) ?? false;
+            var result   = inMemory || current;
+
+            _logger.LogTrace("DynamicComposite.CanHandle({Uri}) => {Result} [pwsCurrent={Current}, inMemory={InMemory}]",
+                uri, result, current, inMemory);
+
+            return result;
         }
 
         public Task<ContentResponse> GetAsync(ContentRequest request, CancellationToken cancellationToken = default)
@@ -106,10 +115,18 @@ public static class MauiProgram
             // quindi viene controllato prima. InMemoryContentProvider è il fallback per
             // le rotte built-in (pws://home, pws://about, ecc.).
             if (_pwsFileService.CurrentProvider?.CanHandle(request.Uri) == true)
+            {
+                _logger.LogDebug("DynamicComposite.GetAsync: uso PwsContentProvider per {Uri}", request.Uri);
                 return _pwsFileService.CurrentProvider.GetAsync(request, cancellationToken);
+            }
 
             if (_inMemory.CanHandle(request.Uri))
+            {
+                _logger.LogDebug("DynamicComposite.GetAsync: uso InMemoryContentProvider per {Uri}", request.Uri);
                 return _inMemory.GetAsync(request, cancellationToken);
+            }
+
+            _logger.LogWarning("DynamicComposite.GetAsync: nessun provider per {Uri}", request.Uri);
 
             return Task.FromResult(ContentResponse.Error(404,
                 $"Nessun provider registrato per '{request.Uri}'."));

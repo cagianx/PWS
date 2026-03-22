@@ -62,12 +62,16 @@ FASE 2 — Lettura
 
 ## Flusso di navigazione
 
-Il flusso completo quando l'utente apre `archivio.pws` e clicca un link interno:
+Il flusso completo quando l'utente apre `archivio.pws`, digita un URI `pws://...`
+oppure clicca un link interno:
 
 ```
 1. Apertura file
    StartupPage → Gtk.FileDialog → PwsReader.OpenAsync(path)
    → PwsFileService.SetProvider(new PwsContentProvider(reader))
+   → Navigation.PushAsync(new BrowserPage())
+   → BrowserPage si apre **vuota** (nessuna navigazione automatica)
+   → l'utente digita `pws://<siteId>/index.html` e preme Invio / "Vai"
    (l'archivio rimane aperto in-memory per tutta la sessione)
 
 2. WebView.Navigating (evento MAUI) — es. link a "pws://about"

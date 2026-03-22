@@ -1,7 +1,6 @@
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using PWS.Core.Abstractions;
-using PWS.Core.Models;
 
 namespace PWS.App.Linux.ViewModels;
 
@@ -15,7 +14,7 @@ public sealed class BrowserViewModel : BaseViewModel
     private readonly ILogger<BrowserViewModel> _logger;
 
     // ── Stato barra indirizzi ────────────────────────────────────────
-    private string _addressText = "pws://home";
+    private string _addressText = string.Empty;
     public string AddressText
     {
         get => _addressText;
@@ -53,7 +52,7 @@ public sealed class BrowserViewModel : BaseViewModel
         private set => SetProperty(ref _htmlContent, value);
     }
 
-    private string _statusMessage = "Pronto";
+    private string _statusMessage = "Inserisci un URI pws://<siteId>/index.html e premi Vai";
     public string StatusMessage
     {
         get => _statusMessage;
@@ -77,14 +76,16 @@ public sealed class BrowserViewModel : BaseViewModel
         _navigation = navigation;
         _logger     = logger;
 
-        NavigateCommand  = new Command<string?>(async url => await NavigateTo(url));
-        GoBackCommand    = new Command(async () => await GoBack(),    () => CanGoBack);
-        GoForwardCommand = new Command(async () => await GoForward(), () => CanGoForward);
-        RefreshCommand   = new Command(async () => await Refresh(),   () => !IsBusy);
+        NavigateCommand  = new Command<string?>(url => _ = NavigateTo(url));
+        GoBackCommand    = new Command(() => _ = GoBack(),    () => CanGoBack);
+        GoForwardCommand = new Command(() => _ = GoForward(), () => CanGoForward);
+        RefreshCommand   = new Command(() => _ = Refresh(),   () => !IsBusy);
         StopCommand      = new Command(Stop, () => IsBusy);
 
         _navigation.Navigating += OnNavigating;
         _navigation.Navigated  += OnNavigated;
+
+        _logger.LogDebug("BrowserViewModel creato. Startup neutro: nessuna navigazione automatica.");
     }
 
     // ── Entry point all'avvio ──────────────────────────────────────
@@ -93,20 +94,16 @@ public sealed class BrowserViewModel : BaseViewModel
     /// <summary>Naviga ad un URI specifico (usato da codice esterno).</summary>
     public Task NavigateToUri(string uri) => NavigateTo(uri);
 
-    /// <summary>
-    /// Pre-compila la barra indirizzi senza navigare.
-    /// L'utente può poi premere Invio o "Vai" per avviare la navigazione.
-    /// </summary>
-    public void PreFillAddress(string uri)
-    {
-        AddressText   = uri;
-        StatusMessage = "Premi Invio o clicca Vai per caricare la pagina";
-    }
 
     // ── Implementazioni comandi ────────────────────────────────────
     private async Task NavigateTo(string? url)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _logger.LogTrace("NavigateTo ignorato: URL vuoto.");
+            StatusMessage = "Inserisci un URI pws:// valido";
+            return;
+        }
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
@@ -122,8 +119,12 @@ public sealed class BrowserViewModel : BaseViewModel
         try
         {
             await _navigation.NavigateAsync(uri, _cts.Token);
+            _logger.LogDebug("NavigateTo completato: {Uri}", uri);
         }
-        catch (OperationCanceledException) { /* ignorato */ }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("NavigateTo cancellato: {Uri}", uri);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled error navigating to '{Uri}'.", uri);
@@ -133,6 +134,7 @@ public sealed class BrowserViewModel : BaseViewModel
 
     private async Task GoBack()
     {
+        _logger.LogDebug("GoBack richiesto.");
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         try
@@ -149,6 +151,7 @@ public sealed class BrowserViewModel : BaseViewModel
 
     private async Task GoForward()
     {
+        _logger.LogDebug("GoForward richiesto.");
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         try
@@ -165,6 +168,7 @@ public sealed class BrowserViewModel : BaseViewModel
 
     private async Task Refresh()
     {
+        _logger.LogDebug("Refresh richiesto.");
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         try
@@ -181,6 +185,7 @@ public sealed class BrowserViewModel : BaseViewModel
 
     private void Stop()
     {
+        _logger.LogDebug("Stop richiesto.");
         _cts?.Cancel();
         IsBusy = false;
         StatusMessage = "Interrotto";
@@ -189,6 +194,7 @@ public sealed class BrowserViewModel : BaseViewModel
     // ── Gestione eventi di navigazione ────────────────────────────
     private void OnNavigating(object? sender, Core.Abstractions.NavigationEventArgs e)
     {
+        _logger.LogDebug("OnNavigating → {Uri}", e.Entry.Uri);
         IsBusy = true;
         AddressText = e.Entry.Uri.ToString();
         StatusMessage = $"Caricamento {e.Entry.Uri}…";
@@ -210,6 +216,7 @@ public sealed class BrowserViewModel : BaseViewModel
 
         if (e.Response is { } resp)
         {
+            _logger.LogTrace("OnNavigated: inizio lettura stream per {Uri}", e.Entry.Uri);
             using var reader = new StreamReader(resp.Content,
                 System.Text.Encoding.UTF8, leaveOpen: true);
             HtmlContent = reader.ReadToEnd();

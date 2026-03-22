@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using PWS.App.Linux.Services;
@@ -15,15 +16,20 @@ namespace PWS.App.Linux.Pages;
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class StartupPage : ContentPage
 {
+    private readonly ILogger<StartupPage> _logger;
+
     public StartupPage()
     {
         InitializeComponent();
+        _logger = IPlatformApplication.Current!.Services.GetRequiredService<ILogger<StartupPage>>();
+        _logger.LogDebug("StartupPage ctor: pagina inizializzata.");
     }
 
     private async void OnOpenFileClicked(object? sender, EventArgs e)
     {
         var services     = IPlatformApplication.Current!.Services;
         var errorService = services.GetRequiredService<ErrorDialogService>();
+        _logger.LogDebug("StartupPage.OnOpenFileClicked: avvio selezione file.");
 
         try
         {
@@ -32,21 +38,36 @@ public partial class StartupPage : ContentPage
             // 1. Mostra file chooser nativo GTK
             var path = await archivePicker.PickAsync();
             if (string.IsNullOrWhiteSpace(path))
+            {
+                _logger.LogDebug("StartupPage.OnOpenFileClicked: selezione annullata.");
                 return; // Utente ha annullato
+            }
+
+            _logger.LogInformation("StartupPage.OnOpenFileClicked: file selezionato '{Path}'.", path);
 
             SetStatus($"Apertura {Path.GetFileName(path)}…", Colors.Gray);
 
             // 2. Apri e verifica il .pws
-            var reader = await PwsReader.OpenAsync(path);
+            _logger.LogDebug("StartupPage.OnOpenFileClicked: apro PwsReader per '{Path}'.", path);
+            var reader = await PwsReader.OpenAsync(path, new PwsOpenOptions
+            {
+                Logger = _logger,
+            });
+            _logger.LogInformation("StartupPage.OnOpenFileClicked: PwsReader aperto. Siti={Count}", reader.Sites.Count);
 
             // 3. Mostra info verifica
             var site = reader.Sites.FirstOrDefault();
             if (site is null)
             {
+                _logger.LogWarning("StartupPage.OnOpenFileClicked: nessun sito nel file '{Path}'.", path);
                 reader.Dispose();
                 SetStatus("Il file .pws non contiene siti.", Colors.Red);
                 return;
             }
+
+            _logger.LogInformation(
+                "StartupPage.OnOpenFileClicked: primo sito SiteId={SiteId} Title='{Title}' Verified={Verified} Files={Files}",
+                site.SiteId, site.Title, site.IsVerified, site.FileCount);
 
             SetStatus(
                 site.IsVerified
@@ -56,10 +77,12 @@ public partial class StartupPage : ContentPage
 
             // 4. Piccola pausa per mostrare lo stato, poi naviga al browser
             await Task.Delay(600);
+            _logger.LogDebug("StartupPage.OnOpenFileClicked: apro BrowserPage.");
             await OpenBrowserAsync(reader, site.SiteId, errorService);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "StartupPage.OnOpenFileClicked: errore durante apertura/verifica .pws.");
             SetStatus($"Errore: {ex.Message}", Colors.Red);
             await errorService.ShowAsync(ex, "Apertura file .pws");
         }
@@ -72,20 +95,29 @@ public partial class StartupPage : ContentPage
     {
         try
         {
-            var services       = IPlatformApplication.Current!.Services;
+            var services      = IPlatformApplication.Current!.Services;
             var pwsFileService = services.GetRequiredService<PwsFileService>();
+            var logFactory    = services.GetRequiredService<ILoggerFactory>();
 
-            var provider = new PwsContentProvider(reader, defaultSiteId);
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: creo PwsContentProvider per siteId={SiteId}.", defaultSiteId);
+
+            var provider = new PwsContentProvider(
+                reader,
+                defaultSiteId,
+                logFactory.CreateLogger<PwsContentProvider>());
+
             pwsFileService.SetProvider(provider);
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: provider registrato in PwsFileService.");
 
-            // L'entrypoint è sempre index.html — non configurabile per ora.
-            var initialUri  = $"pws://{defaultSiteId}/index.html";
-            var browserPage = new BrowserPage(initialUri);
-
-            await Navigation.PushAsync(browserPage);
+            // BrowserPage parte vuoto — nessun URI, nessuna navigazione automatica.
+            // L'utente digita pws://<siteId>/index.html nella barra indirizzi.
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: Navigation.PushAsync(new BrowserPage()).");
+            await Navigation.PushAsync(new BrowserPage());
+            _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage aperta con successo.");
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "StartupPage.OpenBrowserAsync: errore aprendo BrowserPage.");
             SetStatus($"Errore apertura browser: {ex.Message}", Colors.Red);
             await errorService.ShowAsync(ex, "Apertura browser");
         }

@@ -1,5 +1,6 @@
 using PWS.Core.Abstractions;
 using PWS.Core.Models;
+using Microsoft.Extensions.Logging;
 using PWS.Format.Reading;
 
 namespace PWS.Core.Providers;
@@ -19,6 +20,7 @@ namespace PWS.Core.Providers;
 public sealed class PwsContentProvider : IContentProvider, IDisposable
 {
     private readonly PwsReader _reader;
+    private readonly ILogger<PwsContentProvider>? _logger;
     private bool _disposed;
 
     /// <summary>
@@ -36,69 +38,101 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
     /// Site ID di default. Se <see langword="null"/> e il manifest contiene un solo sito,
     /// usa quello automaticamente.
     /// </param>
-    public PwsContentProvider(PwsReader reader, string? defaultSiteId = null)
+    /// <param name="logger">Logger opzionale.</param>
+    public PwsContentProvider(PwsReader reader, string? defaultSiteId = null, ILogger<PwsContentProvider>? logger = null)
     {
         _reader = reader;
+        _logger = logger;
 
         // Auto-detect default site se c'è un solo sito nel manifest
         DefaultSiteId = defaultSiteId
                         ?? (reader.Manifest.Sites.Count == 1
                             ? reader.Manifest.Sites[0].Id
                             : null);
+
+        _logger?.LogDebug("PwsContentProvider creato: siti={Count} defaultSiteId={Sid}",
+            reader.Manifest.Sites.Count, DefaultSiteId);
     }
 
     // ── IContentProvider ─────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Restituisce <see langword="true"/> se l'URI usa lo schema <c>pws://</c>
+    /// e l'host corrisponde a un sito presente nell'archivio corrente.
+    /// </summary>
     public bool CanHandle(Uri uri)
     {
         if (!uri.Scheme.Equals("pws", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger?.LogTrace("CanHandle false — schema '{Scheme}' (atteso 'pws')", uri.Scheme);
             return false;
+        }
 
         // URI senza host (pws:///path): gestibile solo se c'è un DefaultSiteId
         if (string.IsNullOrEmpty(uri.Host))
-            return DefaultSiteId is not null;
+        {
+            var ok = DefaultSiteId is not null;
+            _logger?.LogTrace("CanHandle {Ok} — nessun host, DefaultSiteId={Sid}", ok, DefaultSiteId);
+            return ok;
+        }
 
         // URI con host: verifica che l'host corrisponda a un site ID noto nell'archivio.
         // Questo evita conflitti con pws://home e pws://about (gestiti da InMemoryContentProvider).
-        return _reader.Manifest.Sites.Any(s =>
+        var found = _reader.Manifest.Sites.Any(s =>
             s.Id.Equals(uri.Host, StringComparison.OrdinalIgnoreCase));
+        _logger?.LogTrace("CanHandle {Ok} — host='{Host}' knownSite={Found}", found, uri.Host, found);
+        return found;
     }
 
+    /// <summary>
+    /// Recupera il file richiesto dall'archivio `.pws` come <see cref="ContentResponse"/>.
+    /// </summary>
     public Task<ContentResponse> GetAsync(ContentRequest request, CancellationToken cancellationToken = default)
     {
+        _logger?.LogDebug("GetAsync ← {Uri}", request.Uri);
+
         if (_disposed)
+        {
+            _logger?.LogError("GetAsync: provider già disposed per {Uri}", request.Uri);
             return Task.FromResult(ContentResponse.Error(500, "Provider già disposed."));
+        }
 
         try
         {
             var (siteId, relativePath) = ParseUri(request.Uri);
+            _logger?.LogDebug("GetAsync: siteId='{SiteId}' path='{Path}'", siteId, relativePath);
 
             // Apri il file dal filesystem virtuale
-            var stream = _reader.FileSystem.OpenSiteFile(siteId, relativePath);
+            var stream   = _reader.FileSystem.OpenSiteFile(siteId, relativePath);
 
             // Determina MIME type dal path
             var mimeType = GetMimeType(relativePath);
 
+            _logger?.LogDebug("GetAsync → 200 mimeType='{Mime}' for {Uri}", mimeType, request.Uri);
+
             return Task.FromResult(new ContentResponse
             {
-                StatusCode  = 200,
-                Content     = stream,
-                MimeType    = mimeType,
-                FinalUri    = request.Uri.ToString(),
+                StatusCode = 200,
+                Content    = stream,
+                MimeType   = mimeType,
+                FinalUri   = request.Uri.ToString(),
             });
         }
         catch (KeyNotFoundException)
         {
+            _logger?.LogWarning("GetAsync → 404 sito '{Host}' non nel manifest", request.Uri.Host);
             return Task.FromResult(ContentResponse.Error(404,
                 $"Sito '{request.Uri.Host}' non trovato nel manifest."));
         }
         catch (FileNotFoundException)
         {
+            _logger?.LogWarning("GetAsync → 404 file '{Path}' non nell'archivio", request.Uri.AbsolutePath);
             return Task.FromResult(ContentResponse.Error(404,
                 $"File '{request.Uri.AbsolutePath}' non trovato nell'archivio."));
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "GetAsync → 500 per {Uri}", request.Uri);
             return Task.FromResult(ContentResponse.Error(500,
                 $"Errore lettura file: {ex.Message}"));
         }
@@ -106,9 +140,11 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
 
     // ── IDisposable ──────────────────────────────────────────────────────────
 
+    /// <summary>Rilascia il <see cref="PwsReader"/> posseduto dal provider.</summary>
     public void Dispose()
     {
         if (_disposed) return;
+        _logger?.LogDebug("PwsContentProvider.Dispose: rilascio reader. DefaultSiteId={SiteId}", DefaultSiteId);
         _disposed = true;
         _reader.Dispose();
     }

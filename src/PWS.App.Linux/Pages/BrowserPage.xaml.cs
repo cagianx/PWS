@@ -66,8 +66,16 @@ public partial class BrowserPage : ContentPage
         Dispatcher.Dispatch(() =>
         {
             EnsureWebView();
-            _logger.LogDebug("BrowserPage: aggiorno WebView.Source con HtmlContent di {Len} caratteri.", vm.HtmlContent.Length);
-            _browserWebView!.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
+            _logger.LogDebug(
+                "BrowserPage: aggiorno WebView.Source con HtmlContent di {Len} caratteri. BaseUrl={BaseUrl}",
+                vm.HtmlContent.Length,
+                vm.DocumentBaseUrl);
+
+            _browserWebView!.Source = new HtmlWebViewSource
+            {
+                Html = vm.HtmlContent,
+                BaseUrl = vm.DocumentBaseUrl,
+            };
         });
     }
 

@@ -215,13 +215,19 @@ private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs
         Dispatcher.Dispatch(() =>
         {
             EnsureWebView();
-            _browserWebView!.Source = new HtmlWebViewSource { Html = vm.HtmlContent };
+            _browserWebView!.Source = new HtmlWebViewSource
+            {
+                Html = vm.HtmlContent,
+                BaseUrl = vm.DocumentBaseUrl,
+            };
         });
 }
 ```
 
 La `WebView` non è più istanziata direttamente in XAML. Al suo posto c'è un `ContentView`
 placeholder (`BrowserHost`) che viene sostituito dalla `WebView` solo al primo contenuto.
+`BaseUrl` viene impostato a `pws://<siteId>/...` così Docusaurus e gli altri siti statici
+non vengono più eseguiti come `about:blank`.
 
 **Intercettazione link:**
 ```csharp

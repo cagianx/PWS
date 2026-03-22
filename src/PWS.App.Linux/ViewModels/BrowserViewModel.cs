@@ -52,6 +52,18 @@ public sealed class BrowserViewModel : BaseViewModel
         private set => SetProperty(ref _htmlContent, value);
     }
 
+    private string _documentBaseUrl = string.Empty;
+    /// <summary>
+    /// URI del documento corrente usato come base URL della WebView,
+    /// così gli asset relativi e root-relative (es. Docusaurus) vengono risolti
+    /// rispetto a <c>pws://&lt;siteId&gt;/...</c> invece che a <c>about:blank</c>.
+    /// </summary>
+    public string DocumentBaseUrl
+    {
+        get => _documentBaseUrl;
+        private set => SetProperty(ref _documentBaseUrl, value);
+    }
+
     private string _statusMessage = "Inserisci un URI pws://<siteId>/index.html e premi Vai";
     public string StatusMessage
     {
@@ -207,12 +219,14 @@ public sealed class BrowserViewModel : BaseViewModel
         IsBusy = false;
         AddressText = e.Entry.Uri.ToString();
         PageTitle   = e.Entry.Title ?? e.Entry.Uri.Host;
+        DocumentBaseUrl = e.Entry.Uri.ToString();
 
         var ok = e.Response?.IsSuccess == true;
         StatusMessage = ok ? "Completato" : $"Errore {e.Response?.StatusCode}";
 
         _logger.LogDebug("OnNavigated ← {Uri}  status={Status}  hasResponse={HasResp}",
             e.Entry.Uri, e.Response?.StatusCode, e.Response is not null);
+        _logger.LogDebug("DocumentBaseUrl set: {BaseUrl}", DocumentBaseUrl);
 
         if (e.Response is { } resp)
         {

@@ -56,7 +56,7 @@ public partial class StartupPage : ContentPage
 
             // 4. Piccola pausa per mostrare lo stato, poi naviga al browser
             await Task.Delay(600);
-            await OpenBrowserAsync(reader, site.SiteId, site.EntryPoint, errorService);
+            await OpenBrowserAsync(reader, site.SiteId, errorService);
         }
         catch (Exception ex)
         {
@@ -68,7 +68,6 @@ public partial class StartupPage : ContentPage
     private async Task OpenBrowserAsync(
         PwsReader          reader,
         string             defaultSiteId,
-        string             entryPoint,
         ErrorDialogService errorService)
     {
         try
@@ -79,10 +78,8 @@ public partial class StartupPage : ContentPage
             var provider = new PwsContentProvider(reader, defaultSiteId);
             pwsFileService.SetProvider(provider);
 
-            // Passa l'URI iniziale al costruttore: BrowserPage lo navigherà in
-            // OnAppearing, quando la pagina è già nel widget tree GTK e la
-            // WebView ha un display context valido (evita i GTK critical).
-            var initialUri  = $"pack://{defaultSiteId}/{entryPoint}";
+            // L'entrypoint è sempre index.html — non configurabile per ora.
+            var initialUri  = $"pack://{defaultSiteId}/index.html";
             var browserPage = new BrowserPage(initialUri);
 
             await Navigation.PushAsync(browserPage);

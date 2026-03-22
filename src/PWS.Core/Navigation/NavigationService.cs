@@ -50,7 +50,9 @@ public sealed class NavigationService : INavigationService
         }
 
         _history.Push(entry);
+        // Gli handler di Navigated devono leggere Content prima del dispose.
         Navigated?.Invoke(this, new NavigationEventArgs(entry, response));
+        response.Dispose();
     }
 
     public async Task GoBackAsync(CancellationToken cancellationToken = default)
@@ -77,6 +79,7 @@ public sealed class NavigationService : INavigationService
         Navigating?.Invoke(this, new NavigationEventArgs(entry));
         var response = await FetchAsync(entry.Uri, cancellationToken);
         Navigated?.Invoke(this, new NavigationEventArgs(entry, response));
+        response.Dispose();
     }
 
     private async Task<ContentResponse> FetchAsync(Uri uri, CancellationToken cancellationToken)

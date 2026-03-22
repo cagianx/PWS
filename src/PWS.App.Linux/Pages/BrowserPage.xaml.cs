@@ -45,12 +45,20 @@ public partial class BrowserPage : ContentPage
 
         if (BindingContext is not BrowserViewModel vm) return;
 
+        // GTK4 schedula la realizzazione dei widget nativi (GtkEntry, WebKitWebView…)
+        // nel main loop GLib. OnAppearing può arrivare PRIMA che quei widget siano
+        // "realized" (connessi al display), quindi Pango non ha ancora un contesto
+        // valido → gtk_text_attributes_ref / pango_layout_new → SIGSEGV.
+        //
+        // Task.Delay(0) con await forza il rientro nel SynchronizationContext MAUI
+        // (GLib main loop) e lascia che GTK processi la realizzazione prima di
+        // toccare qualsiasi widget.
+        await Task.Delay(0);
+
         try
         {
             if (_initialUri is not null)
             {
-                // Naviga all'URI fornito da StartupPage.
-                // A questo punto la pagina è nel widget tree GTK → la WebView è pronta.
                 var uri = _initialUri;
                 _initialUri = null;
                 await vm.NavigateToUri(uri);

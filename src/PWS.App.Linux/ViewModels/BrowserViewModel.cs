@@ -187,8 +187,10 @@ public sealed class BrowserViewModel : BaseViewModel
 
         if (e.Response is { } resp)
         {
+            // leaveOpen: true — NavigationService dispone ContentResponse (e il suo stream)
+            // dopo che tutti i listener hanno finito di leggerlo.
             using var reader = new StreamReader(resp.Content,
-                System.Text.Encoding.UTF8, leaveOpen: false);
+                System.Text.Encoding.UTF8, leaveOpen: true);
             HtmlContent = reader.ReadToEnd();
         }
 

@@ -20,6 +20,19 @@ public sealed class LoopbackContentServer : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
 
+    /// <summary>
+    /// Serializza l'accesso allo <see cref="System.IO.Compression.ZipArchive"/> sottostante.
+    /// <para>
+    /// <c>ZipArchive</c> non è thread-safe: leggere entry diverse in parallelo
+    /// (p.es. index.html + main.js + styles.css nella stessa pagina) corrode
+    /// lo stream interno e genera <c>InvalidDataException: unsupported compression method</c>.
+    /// La soluzione è acquisire il lock, leggere e bufferizzare l'entry in un
+    /// <c>MemoryStream</c>, poi rilasciare il lock — così il <c>CopyToAsync</c>
+    /// verso il client avviene su un buffer in-memory, mai su ZipArchive direttamente.
+    /// </para>
+    /// </summary>
+    private readonly SemaphoreSlim _zipLock = new(1, 1);
+
     public LoopbackContentServer(
         PwsContentProvider provider,
         string siteId,
@@ -132,23 +145,66 @@ public sealed class LoopbackContentServer : IDisposable
 
     private async Task<ContentResponse> GetContentAsync(string relativePath)
     {
+        // Serializza le letture ZIP: ZipArchive non è thread-safe.
+        await _zipLock.WaitAsync(_cts.Token);
+        try
+        {
+            return await ReadAndBufferAsync(relativePath);
+        }
+        finally
+        {
+            _zipLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Legge il file dal provider e ne copia il contenuto in un <see cref="MemoryStream"/>.
+    /// Deve essere chiamata mentre si detiene <see cref="_zipLock"/>.
+    /// </summary>
+    private async Task<ContentResponse> ReadAndBufferAsync(string relativePath)
+    {
         var primaryUri = new Uri($"pws://{_siteId}/{relativePath}");
-        var content    = await _provider.GetAsync(ContentRequest.Get(primaryUri));
+        var raw = await _provider.GetAsync(ContentRequest.Get(primaryUri));
 
-        if (content.StatusCode != 404)
-            return content;
+        if (raw.StatusCode != 404)
+            return await BufferAsync(raw);
 
-        content.Dispose();
+        raw.Dispose();
 
-        // Fallback: prova index.html per path senza estensione
+        // Fallback: per path senza estensione prova /index.html
         if (!Path.HasExtension(relativePath))
         {
             var fallbackPath = relativePath.TrimEnd('/') + "/index.html";
-            return await _provider.GetAsync(
+            var fallback = await _provider.GetAsync(
                 ContentRequest.Get(new Uri($"pws://{_siteId}/{fallbackPath}")));
+            return await BufferAsync(fallback);
         }
 
-        return await _provider.GetAsync(ContentRequest.Get(primaryUri));
+        // File con estensione non trovato → 404
+        return ContentResponse.Error(404, $"File '{relativePath}' non trovato nell'archivio.");
+    }
+
+    /// <summary>
+    /// Copia il contenuto di <paramref name="raw"/> in un <see cref="MemoryStream"/> e
+    /// restituisce un nuovo <see cref="ContentResponse"/> che non dipende più dallo
+    /// stream ZipArchive originale (che viene poi disposed).
+    /// </summary>
+    private static async Task<ContentResponse> BufferAsync(ContentResponse raw)
+    {
+        using (raw)
+        {
+            var ms = new MemoryStream();
+            await raw.Content.CopyToAsync(ms);
+            ms.Position = 0;
+            return new ContentResponse
+            {
+                StatusCode = raw.StatusCode,
+                MimeType   = raw.MimeType,
+                Content    = ms,
+                FinalUri   = raw.FinalUri,
+                Headers    = raw.Headers,
+            };
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -180,6 +236,7 @@ public sealed class LoopbackContentServer : IDisposable
         _cts.Cancel();
         _listener.Close();
         _cts.Dispose();
+        _zipLock.Dispose();
     }
 
     private static class HttpMethods

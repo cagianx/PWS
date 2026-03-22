@@ -16,14 +16,18 @@ namespace PWS.App.Linux.Pages;
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class BrowserPage : ContentPage
 {
-    private bool _initialLoadDone;
+    private bool    _initialLoadDone;
+    private string? _initialUri;   // impostato da StartupPage, consumato in OnAppearing
 
-    public BrowserPage()
+    /// <param name="initialUri">
+    /// URI da aprire subito dopo che la pagina è montata nel widget tree GTK.
+    /// Se <see langword="null"/> viene usata la home <c>pws://home</c>.
+    /// </param>
+    public BrowserPage(string? initialUri = null)
     {
         InitializeComponent();
+        _initialUri = initialUri;
 
-        // Risolve il ViewModel dal container DI senza richiedere
-        // la constructor-injection (non supportata via ContentTemplate in Shell)
         var vm = IPlatformApplication.Current!.Services.GetRequiredService<BrowserViewModel>();
         BindingContext = vm;
 
@@ -40,12 +44,23 @@ public partial class BrowserPage : ContentPage
         _initialLoadDone = true;
 
         if (BindingContext is not BrowserViewModel vm) return;
-        if (!string.IsNullOrWhiteSpace(vm.HtmlContent)) return;  // già caricato da StartupPage
-        if (!string.Equals(vm.AddressText, "pws://home", StringComparison.OrdinalIgnoreCase)) return;
 
         try
         {
-            await vm.InitializeAsync();
+            if (_initialUri is not null)
+            {
+                // Naviga all'URI fornito da StartupPage.
+                // A questo punto la pagina è nel widget tree GTK → la WebView è pronta.
+                var uri = _initialUri;
+                _initialUri = null;
+                await vm.NavigateToUri(uri);
+            }
+            else if (string.IsNullOrWhiteSpace(vm.HtmlContent)
+                     && string.Equals(vm.AddressText, "pws://home",
+                                      StringComparison.OrdinalIgnoreCase))
+            {
+                await vm.InitializeAsync();
+            }
         }
         catch (Exception ex)
         {

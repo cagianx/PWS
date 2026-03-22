@@ -79,12 +79,11 @@ public partial class StartupPage : ContentPage
             var provider = new PwsContentProvider(reader, defaultSiteId);
             pwsFileService.SetProvider(provider);
 
-            var browserPage = new BrowserPage();
-
-            // Naviga prima di fare PushAsync così HtmlContent è già pronto
-            // e OnAppearing non ri-inizializza con pws://home
-            if (browserPage.BindingContext is BrowserViewModel vm)
-                await vm.NavigateToUri($"pack://{defaultSiteId}/{entryPoint}");
+            // Passa l'URI iniziale al costruttore: BrowserPage lo navigherà in
+            // OnAppearing, quando la pagina è già nel widget tree GTK e la
+            // WebView ha un display context valido (evita i GTK critical).
+            var initialUri  = $"pack://{defaultSiteId}/{entryPoint}";
+            var browserPage = new BrowserPage(initialUri);
 
             await Navigation.PushAsync(browserPage);
         }

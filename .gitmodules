@@ -1,0 +1,3 @@
+[submodule "my-docs"]
+	path = my-docs
+	url = https://github.com/cagianx/my-docs.git

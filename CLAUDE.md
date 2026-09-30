@@ -45,6 +45,29 @@ Regole d'uso:
   `cd my-docs && git checkout vX.Y.Z && cd .. && git add my-docs && git commit -m "chore(my-docs): bump to vX.Y.Z"`.
 - Documentazione solo in Markdown e Mermaid: niente screenshot o PDF come fonte.
 
+### Server MCP di Rider — via primaria per il codice
+
+La solution è aperta in JetBrains Rider, che espone un server MCP (`mcp__rider__*`).
+È la **via primaria** per leggere, cercare, scrivere e verificare il codice; gli strumenti
+generici (`Read`, `Edit`, `Write`, `grep`/`find` via Bash) sono il fallback, da usare solo
+se Rider non è connesso o se lo strumento Rider equivalente non esiste o fallisce.
+Passare sempre `rootFolder` = radice del repository.
+
+| Attività | Strumento Rider |
+|----------|-----------------|
+| Leggere file | `read_file` |
+| Cercare file / testo / simboli | `search_file`, `search_text`, `search_regex`, `search_symbol`, `get_symbol_info` |
+| Struttura | `list_directory_tree`, `get_solution_projects`, `get_project_dependencies`, `get_class_hierarchy` |
+| Creare / modificare file | `create_new_file`, `apply_patch` |
+| Refactoring | `rename_refactoring`, `change_api_signature`, `extract_method`, `extract_interface`, `move_type_to_namespace`, `safe_delete` |
+| Verifica dopo ogni modifica | `lint_files` / `get_file_problems`, `reformat_file` |
+| Build e test | `build_solution_start` + `build_solution_state`, `findTests`, `execute_run_configuration` |
+
+Per rinomine e cambi di firma usare sempre i refactoring di Rider, non la sostituzione
+testuale: aggiornano anche XAML, `nameof` e `<see cref>`.
+La verifica pre-commit con `dotnet build` / `dotnet test` / `pnpm build` resta obbligatoria
+(sezione «Regola fondamentale»).
+
 ### Skill disponibili
 
 - `/commit` → commit assistito dall'IA (`.claude/skills/commit/SKILL.md`, procedura in

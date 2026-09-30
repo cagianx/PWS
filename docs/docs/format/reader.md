@@ -165,7 +165,7 @@ using var reader = await PwsReader.OpenAsync(ms);
 
 | Eccezione | Causa |
 |-----------|-------|
-| `InvalidDataException` | `manifest.json` mancante, malformato o JWT non valido |
+| `InvalidDataException` | `manifest.json` mancante, non JSON, vuoto (`null`), oppure JWT vuoto o non valido. Un JSON malformato non esce come `JsonException`: l'eccezione originale è in `InnerException` |
 | `InvalidDataException` | Token unsigned con `RequireSignedTokens = true` |
 | `InvalidDataException` | Content hash mismatch — file alterati dopo il packing |
 | `FileNotFoundException` | Path non trovato nel filesystem virtuale |

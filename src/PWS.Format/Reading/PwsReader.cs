@@ -90,11 +90,22 @@ public sealed class PwsReader : IDisposable
         await raw.CopyToAsync(buf, ct);
         buf.Position = 0;
 
-        var manifest = await JsonSerializer.DeserializeAsync<PwsManifest>(
-                           buf,
-                           new JsonSerializerOptions { PropertyNameCaseInsensitive = true },
-                           ct)
-                       ?? throw new InvalidDataException("manifest.json is invalid or empty.");
+        PwsManifest? manifest;
+        try
+        {
+            manifest = await JsonSerializer.DeserializeAsync<PwsManifest>(
+                buf,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true },
+                ct);
+        }
+        catch (JsonException ex)
+        {
+            // Un manifest malformato è un archivio non valido, come un manifest mancante.
+            throw new InvalidDataException("manifest.json is not valid JSON.", ex);
+        }
+
+        if (manifest is null)
+            throw new InvalidDataException("manifest.json is invalid or empty.");
 
         // ── Resolve verification key ──────────────────────────────────────────
         var verKey = options?.VerificationKey;

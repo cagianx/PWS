@@ -116,6 +116,18 @@ public sealed class ValidateCommandTests : ArchiveTestBase
         exitCode.Should().Be(1);
     }
 
+    [TestCase("{ non è json")]
+    [TestCase("null")]
+    public async Task Validate_archivio_con_manifest_malformato_fallisce(string manifest)
+    {
+        var pws = await PackSampleSiteAsync();
+        ReplaceEntry(pws, "manifest.json", manifest);
+
+        var exitCode = await ValidateAsync(new ValidateOptions { FilePath = pws });
+
+        exitCode.Should().Be(1);
+    }
+
     [Test]
     public async Task Validate_archivio_con_file_modificato_dopo_il_packing_fallisce()
     {

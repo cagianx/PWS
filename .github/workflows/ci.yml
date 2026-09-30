@@ -176,3 +176,34 @@ jobs:
           path: src/PWS.Format.Tests/TestResults/**/*.trx
           if-no-files-found: error
 
+  test-integration:
+    name: Integration tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'PWS.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Run integration tests
+        run: dotnet test src/PWS.IntegrationTests/PWS.IntegrationTests.csproj --configuration $BUILD_CONFIGURATION --logger "console;verbosity=normal" --logger "trx;LogFileName=pws-integration-tests.trx"
+
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pws-integration-test-results
+          path: src/PWS.IntegrationTests/TestResults/**/*.trx
+          if-no-files-found: error

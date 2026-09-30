@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Platforms.Linux.Gtk4.Platform;
 using PWS.App.Linux.Services;
 using PWS.Core.Hosting;
 using PWS.App.Linux.ViewModels;
@@ -17,39 +16,12 @@ namespace PWS.App.Linux.Pages;
 /// vengono serviti dal <see cref="LoopbackContentServer"/> dedicato.
 /// Il codice-behind è il solo punto in cui si tocca la WebView MAUI.
 /// </summary>
-/// <remarks>
-/// <para><b>Bug GTK4 resize (backend dotnet/maui-labs, presente dalla 0.6.0 di Redth ad oggi):</b></para>
-/// <para>
-/// <c>LayoutHandler.ConnectHandler</c> aggancia una lambda anonima a
-/// <c>GtkWindow.OnNotify</c> per gestire il resize, ma presenta due difetti:
-/// </para>
-/// <list type="number">
-///   <item>La lambda non viene mai de-registrata in <c>DisconnectHandler</c>.
-///   Se la pagina viene distrutta, <c>VirtualView</c> diventa null → la lambda
-///   lancia <c>InvalidOperationException</c>, abortendo il dispatch del segnale
-///   e impedendo il resize delle pagine successive.</item>
-///   <item>Nella lambda, <c>window.GetAllocatedWidth/Height()</c> restituisce
-///   la dimensione <b>vecchia</b> perché al momento del <c>notify::default-width</c>
-///   la nuova allocazione GTK4 non è ancora avvenuta. <c>DoLayout()</c> quindi
-///   ricalcola il layout con le vecchie dimensioni → nessun cambiamento visivo.</item>
-/// </list>
-/// <para><b>Workaround:</b></para>
-/// <list type="bullet">
-///   <item>Bug 1: non distruggere mai le pagine (solo <c>PushAsync</c>/<c>PopAsync</c>).</item>
-///   <item>Bug 2: agganciare direttamente <c>GtkWindow.OnNotify</c>, leggere la
-///   dimensione corretta da <c>GetDefaultSize()</c>, e chiamare
-///   <c>CrossPlatformMeasure</c>/<c>CrossPlatformArrange</c> sulla
-///   <see cref="GtkLayoutPanel"/> del Grid.</item>
-/// </list>
-/// </remarks>
 [XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class BrowserPage : ContentPage
 {
     private bool _bindingDone;
-    private bool _resizeHooked;
     private WebView? _browserWebView;
     private readonly ILogger<BrowserPage> _logger;
-    private Gtk.Window? _gtkWindow;
 
     public BrowserPage()
     {
@@ -81,92 +53,7 @@ public partial class BrowserPage : ContentPage
 
         _logger.LogDebug("BrowserPage.OnAppearing: BindingContext assegnato a BrowserViewModel.");
 
-        // Installa il workaround resize dopo che il widget tree è stabile
-        InstallResizeWorkaround();
-
         vm.NavigateToCurrentSite();
-    }
-
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-        if (_gtkWindow is not null)
-        {
-            _gtkWindow.OnNotify -= OnGtkWindowNotify;
-            _gtkWindow = null;
-            _resizeHooked = false;
-            _logger.LogDebug("BrowserPage.OnDisappearing: sganciato GtkWindow.OnNotify.");
-        }
-    }
-
-    // ── Workaround resize GTK4 ───────────────────────────────────
-
-    /// <summary>
-    /// Aggancia il workaround per il bug resize del <c>LayoutHandler</c>.
-    /// Cerca la <see cref="Gtk.Window"/> risalendo il widget tree nativo
-    /// dal <see cref="RootGrid"/> e si iscrive a <c>OnNotify</c>.
-    /// </summary>
-    private void InstallResizeWorkaround()
-    {
-        if (_resizeHooked) return;
-
-        // Risali il widget tree nativo per trovare la GtkWindow
-        if (RootGrid.Handler?.PlatformView is not Gtk.Widget nativeGrid)
-        {
-            _logger.LogWarning("BrowserPage: RootGrid non ha un PlatformView nativo, resize workaround non installato.");
-            return;
-        }
-
-        Gtk.Widget? cur = nativeGrid;
-        while (cur is not null && cur is not Gtk.Window)
-            cur = cur.GetParent();
-
-        if (cur is not Gtk.Window window)
-        {
-            _logger.LogWarning("BrowserPage: GtkWindow non trovata risalendo il widget tree, resize workaround non installato.");
-            return;
-        }
-
-        _gtkWindow = window;
-        _gtkWindow.OnNotify += OnGtkWindowNotify;
-        _resizeHooked = true;
-        _logger.LogDebug("BrowserPage: resize workaround installato (GtkWindow trovata via widget tree).");
-    }
-
-    /// <summary>
-    /// Intercetta <c>notify::default-width</c> / <c>notify::default-height</c> sulla
-    /// <see cref="Gtk.Window"/> e forza il re-layout della <see cref="GtkLayoutPanel"/>
-    /// del Grid con le dimensioni corrette da <c>GetDefaultSize()</c>.
-    /// </summary>
-    /// <remarks>
-    /// Il <c>LayoutHandler</c> del backend usa <c>GetAllocatedWidth/Height()</c> che a
-    /// questo punto restituiscono ancora i valori VECCHI (la nuova allocazione GTK4 non
-    /// è ancora avvenuta). Noi usiamo <c>GetDefaultSize()</c> che ha già il valore nuovo.
-    /// </remarks>
-    private void OnGtkWindowNotify(GObject.Object sender, GObject.Object.NotifySignalArgs args)
-    {
-        var prop = args.Pspec.GetName();
-        if (prop is not ("default-width" or "default-height"))
-            return;
-
-        if (_gtkWindow is null) return;
-
-        // GetDefaultSize() ha già il valore NUOVO al momento del notify,
-        // a differenza di GetAllocatedWidth/Height() che è ancora VECCHIO.
-        _gtkWindow.GetDefaultSize(out var w, out var h);
-        if (w < 1 || h < 1) return;
-
-        _logger.LogDebug("BrowserPage.OnGtkWindowNotify: resize {W}x{H} (da GetDefaultSize)", w, h);
-
-        // Accede direttamente alla GtkLayoutPanel del Grid e forza
-        // CrossPlatformMeasure/Arrange con le dimensioni corrette,
-        // bypassando il LayoutHandler che usa valori stale.
-        if (RootGrid.Handler?.PlatformView is GtkLayoutPanel layoutPanel)
-        {
-            (RootGrid as VisualElement)?.InvalidateMeasure();
-            layoutPanel.CrossPlatformMeasure(w, h);
-            layoutPanel.CrossPlatformArrange(new Rect(0, 0, w, h));
-        }
     }
 
     // ── Sincronizzazione ViewModel → WebView ─────────────────────
@@ -251,8 +138,7 @@ public partial class BrowserPage : ContentPage
     // ── Pulsante "Apri file" ──────────────────────────────────────
 
     /// <summary>
-    /// Torna alla <see cref="StartupPage"/> tramite <c>PopAsync</c>.
-    /// NON usare <c>RemovePage</c>: vedi remarks della classe per il bug GTK4.
+    /// Torna alla <see cref="StartupPage"/>, che resta alla radice dello stack, tramite <c>PopAsync</c>.
     /// </summary>
     private async void OnOpenFileClicked(object? sender, EventArgs e)
     {

@@ -139,12 +139,12 @@ await Navigation.PushAsync(new BrowserPage());
 // BrowserPage.OnAppearing chiama automaticamente vm.NavigateToCurrentSite()
 ```
 
-La `StartupPage` **resta nello stack**: non viene rimossa con `Navigation.RemovePage(...)`.
-Questo è un workaround per un bug del backend GTK4, presente dalla 0.6.0 di Redth/Maui.Gtk
-fino all'attuale versione di `dotnet/maui-labs`: il `LayoutHandler`
-aggancia callback di resize alla `GtkWindow` senza de-registrarle correttamente, quindi
-distruggere una pagina può lasciare handler stantii che interferiscono con i resize successivi.
-Per questo motivo il flusso usa solo `PushAsync()` / `PopAsync()`.
+La `StartupPage` **resta nello stack**, alla radice della `NavigationPage`: il pulsante
+"Apri file" della `BrowserPage` ci torna con `PopAsync()` per scegliere un altro archivio.
+
+La navigazione tra pagine avviene sul main thread GTK. Il backend non installa un
+`SynchronizationContext`, quindi dopo gli `await` di I/O (`PwsReader.OpenAsync`) la
+`StartupPage` riporta esplicitamente il lavoro sulla UI al main thread con `Dispatcher`.
 
 Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono letti on-demand.
 
@@ -297,18 +297,13 @@ private void WebView_Navigated(object? sender, WebNavigatedEventArgs e)
 
 **Resize GTK4 — stato attuale:**
 
-Il problema di resize non è nella `WebView` in sé ma nel backend GTK4 (verificato sia su
-`Platform.Maui.Linux.Gtk4` 0.6.0 sia su `Microsoft.Maui.Platforms.Linux.Gtk4`
-0.1.0-preview.12), in particolare in `LayoutHandler`:
+Fino a `Microsoft.Maui.Platforms.Linux.Gtk4` 0.1.0-preview.12 il `LayoutHandler` del backend
+aveva due difetti: il listener anonimo su `GtkWindow.OnNotify` non veniva rimosso in
+`DisconnectHandler`, e durante `notify::default-width` / `notify::default-height` leggeva
+`GetAllocatedWidth()` / `GetAllocatedHeight()` ancora vecchi. L'app li aggirava agganciando
+`OnNotify` in `BrowserPage` e non rimuovendo mai le pagine.
 
-- il listener anonimo agganciato a `GtkWindow.OnNotify` non viene rimosso in `DisconnectHandler`;
-- durante `notify::default-width` / `notify::default-height` il backend usa
-  `GetAllocatedWidth()` / `GetAllocatedHeight()`, che possono ancora riflettere la dimensione
-  precedente al momento del callback.
-
-Nel codice applicativo il workaround adottato è conservativo:
-
-- non si usa più la ricreazione della `WebView` al resize;
-- non si distruggono le pagine durante la navigazione (`RemovePage`), per evitare handler GTK4
-  stantii con `VirtualView = null`;
-- il passaggio `StartupPage` ⇄ `BrowserPage` usa solo `PushAsync()` / `PopAsync()`.
+La PR [dotnet/maui-labs#594](https://github.com/dotnet/maui-labs/pull/594) li corregge
+(layout guidato dalle allocazioni reali, callback rimosse in `DisconnectHandler`). Con il
+pacchetto della PR i workaround sono stati tolti e il resize funziona senza interventi
+dell'app.

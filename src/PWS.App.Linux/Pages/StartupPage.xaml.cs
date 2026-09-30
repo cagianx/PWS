@@ -116,14 +116,8 @@ public partial class StartupPage : ContentPage
             _logger.LogDebug("StartupPage.OpenBrowserAsync: provider e server loopback registrati (porta={Port}).",
                 pwsFileService.CurrentServer?.Port);
 
-            // Bug GTK4 resize (backend dotnet/maui-labs, presente dalla 0.6.0 di Redth ad oggi):
-            // LayoutHandler.ConnectHandler aggancia una lambda anonima a
-            // GtkWindow.OnNotify che non viene MAI de-registrata. Se la pagina
-            // viene distrutta (RemovePage), il suo LayoutHandler ha VirtualView = null
-            // e la lambda lancia InvalidOperationException al prossimo resize,
-            // abortendo il dispatch del segnale e impedendo il resize delle
-            // pagine successive. Workaround: PushAsync SENZA RemovePage.
-            _logger.LogDebug("StartupPage.OpenBrowserAsync: push BrowserPage (senza RemovePage per bug GTK4 resize).");
+            // StartupPage resta nello stack: il pulsante "Apri file" di BrowserPage ci torna con PopAsync.
+            _logger.LogDebug("StartupPage.OpenBrowserAsync: push BrowserPage.");
             var browserPage = new BrowserPage();
             await Navigation.PushAsync(browserPage, animated: false);
             _logger.LogInformation("StartupPage.OpenBrowserAsync: BrowserPage pushed. StartupPage resta nello stack.");

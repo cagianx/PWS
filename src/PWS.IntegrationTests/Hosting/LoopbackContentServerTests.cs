@@ -175,6 +175,24 @@ public sealed class LoopbackContentServerTests : ArchiveTestBase
         await act.Should().ThrowAsync<HttpRequestException>();
     }
 
+    [TestCase("pagine/citt%C3%A0%20vecchia.html", "pagine/città vecchia.html")]
+    [TestCase("100%25.html",                      "100%.html")]
+    [TestCase("100%2525.html",                    "100%25.html")]
+    public async Task Get_percorso_codificato_viene_decodificato_una_sola_volta(
+        string requestedPath, string expectedFile)
+    {
+        // I file contengono il proprio nome: la risposta dice quale file è stato servito.
+        string[] names = ["pagine/città vecchia.html", "100%.html", "100%25.html"];
+        var files = names.ToDictionary(n => n, SampleSite.Utf8);
+        var pws   = await PackAsync(PwsSigningKey.None(), ("docs", "Docs", CreateSiteDirectory("docs", files)));
+        var (_, http) = await StartServerAsync(pws);
+
+        using var response = await http.GetAsync(requestedPath);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Be(expectedFile);
+    }
+
     [TestCase("/../b/index.html")]
     [TestCase("/%2e%2e/b/index.html")]
     [TestCase("/sub/../../b/index.html")]

@@ -8,9 +8,9 @@
 
 ## 2. Robustezza dei percorsi dei siti
 
-- [ ] 2.1 Aggiungere a `PwsContentProviderTests` i casi della spec: host con maiuscole, `pws:///` con più siti e senza sito di default non gestibile, MIME per `.html`, `.css`, `.js`, `.svg`, `.woff2`, `.bin` (test parametrico), segmenti `..` che non restituiscono file di un altro sito. Verifica: suite verde, oppure test rossi annotati per il task 2.3.
-- [ ] 2.2 Aggiungere a `PwsContentProviderTests` e `LoopbackContentServerTests` il file `pagine/città vecchia.html` richiesto con percorso codificato, e un file con `%25` nel nome per escludere la doppia decodifica. Verifica: test eseguiti; se rossi, si procede con 2.3.
-- [ ] 2.3 Se 2.1 o 2.2 hanno test rossi: decodificare il percorso una sola volta in `PwsContentProvider.ParseUri` (decisione 6 di `design.md`) e correggere gli altri casi emersi. Verifica: suite verde. Commit `fix(providers): ...` con i test che dimostrano il fix; i test già verdi vanno in un commit `test(providers): ...` separato.
+- [x] 2.1 Aggiungere a `PwsContentProviderTests` i casi della spec: host con maiuscole, `pws:///` con più siti e senza sito di default non gestibile, MIME per `.html`, `.css`, `.js`, `.svg`, `.woff2`, `.bin` (test parametrico), segmenti `..` che non restituiscono file di un altro sito. Verifica: suite verde, oppure test rossi annotati per il task 2.3.
+- [x] 2.2 Aggiungere a `PwsContentProviderTests` e `LoopbackContentServerTests` il file `pagine/città vecchia.html` richiesto con percorso codificato, e un file con `%25` nel nome per escludere la doppia decodifica. Verifica: test eseguiti; se rossi, si procede con 2.3.
+- [x] 2.3 Se 2.1 o 2.2 hanno test rossi: decodificare il percorso una sola volta in `PwsContentProvider.ParseUri` (decisione 6 di `design.md`) e correggere gli altri casi emersi. Verifica: suite verde. Commit `fix(providers): ...` con i test che dimostrano il fix; i test già verdi vanno in un commit `test(providers): ...` separato.
 
 ## 3. Casi di errore di PWS.Format
 

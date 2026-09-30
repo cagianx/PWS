@@ -220,6 +220,21 @@ public sealed class PwsContentProviderTests : ArchiveTestBase
             (await ReadTextAsync(response.Content)).Should().NotBe(SiteBIndex);
     }
 
+    [TestCase("pagine/citt%C3%A0%20vecchia.html", "pagine/città vecchia.html")]
+    [TestCase("100%25.html",                      "100%.html")]
+    [TestCase("100%2525.html",                    "100%25.html")]
+    public async Task I_percorsi_codificati_vengono_decodificati_una_sola_volta(
+        string requestedPath, string expectedFile)
+    {
+        var pws = await PackEncodedNamesSiteAsync();
+        using var provider = await OpenProviderAsync(pws);
+
+        using var response = await provider.GetAsync(ContentRequest.Get($"pws://docs/{requestedPath}"));
+
+        response.StatusCode.Should().Be(200);
+        (await ReadTextAsync(response.Content)).Should().Be(expectedFile);
+    }
+
     private const string SiteAIndex = "<h1>Sito A</h1>";
     private const string SiteBIndex = "<h1>Sito B</h1>";
 
@@ -228,4 +243,11 @@ public sealed class PwsContentProviderTests : ArchiveTestBase
         ("a", "A", CreateSiteDirectory("a", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8(SiteAIndex) })),
         ("b", "B", CreateSiteDirectory("b", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8(SiteBIndex) })));
 
+    /// <summary>Sito i cui file contengono il proprio nome: la risposta dice quale file è stato servito.</summary>
+    private Task<string> PackEncodedNamesSiteAsync()
+    {
+        string[] names = ["pagine/città vecchia.html", "100%.html", "100%25.html"];
+        var files = names.ToDictionary(n => n, SampleSite.Utf8);
+        return PackAsync(PwsSigningKey.None(), ("docs", "Docs", CreateSiteDirectory("docs", files)));
+    }
 }

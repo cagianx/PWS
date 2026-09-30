@@ -218,6 +218,7 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
         // pws://docs/index.html       → siteId="docs", path="index.html"
         // pws:///index.html            → siteId=DefaultSiteId, path="index.html"
         // pws://docs/assets/main.css  → siteId="docs", path="assets/main.css"
+        // pws://docs/citt%C3%A0.html   → siteId="docs", path="città.html"
 
         var siteId = string.IsNullOrEmpty(uri.Host) ? DefaultSiteId : uri.Host;
         if (string.IsNullOrEmpty(siteId))
@@ -225,7 +226,9 @@ public sealed class PwsContentProvider : IContentProvider, IDisposable
                 "URI pws:/// richiede un DefaultSiteId. " +
                 "Specificare l'host (es. pws://docs/) o impostare DefaultSiteId.");
 
-        var relativePath = uri.AbsolutePath.TrimStart('/');
+        // AbsolutePath resta codificato: i nomi nello zip no. Si decodifica una sola volta,
+        // qui, così vale sia per pws:// sia per il server loopback che passa il percorso codificato.
+        var relativePath = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
         return (siteId, relativePath);
     }
 

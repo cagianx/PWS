@@ -174,4 +174,37 @@ public sealed class LoopbackContentServerTests : ArchiveTestBase
         var act = async () => await http.GetAsync("/");
         await act.Should().ThrowAsync<HttpRequestException>();
     }
+
+    [TestCase("/../b/index.html")]
+    [TestCase("/%2e%2e/b/index.html")]
+    [TestCase("/sub/../../b/index.html")]
+    public async Task I_segmenti_punto_punto_non_escono_dal_sito_servito(string rawPath)
+    {
+        var pws = await PackAsync(
+            PwsSigningKey.None(),
+            ("a", "A", CreateSiteDirectory("a", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8("<h1>Sito A</h1>") })),
+            ("b", "B", CreateSiteDirectory("b", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8("<h1>Sito B</h1>") })));
+        var provider = Track(await OpenProviderAsync(pws, defaultSiteId: "a"));
+        var server   = Track(new LoopbackContentServer(provider, "a", NullLogger<LoopbackContentServer>.Instance));
+
+        // Socket grezzo: HttpClient normalizzerebbe il percorso prima di inviarlo.
+        var control = await SendRawGetAsync(server.Port, "/index.html");
+        var raw     = await SendRawGetAsync(server.Port, rawPath);
+
+        control.Should().Contain("Sito A");
+        raw.Should().NotContain("Sito B");
+    }
+
+    private static async Task<string> SendRawGetAsync(int port, string rawPath)
+    {
+        using var tcp = new System.Net.Sockets.TcpClient();
+        await tcp.ConnectAsync(IPAddress.Loopback, port);
+        await using var stream = tcp.GetStream();
+
+        var request = $"GET {rawPath} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n";
+        await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(request));
+
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync();
+    }
 }

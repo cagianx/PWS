@@ -175,4 +175,57 @@ public sealed class PwsContentProviderTests : ArchiveTestBase
 
         response.StatusCode.Should().Be(500);
     }
+
+    [TestCase("pws://DOCS/index.html")]
+    [TestCase("pws://Docs/index.html")]
+    public async Task L_host_del_sito_non_distingue_le_maiuscole(string uri)
+    {
+        var pws = await PackSampleSiteAsync();
+        using var provider = await OpenProviderAsync(pws);
+
+        provider.CanHandle(new Uri(uri)).Should().BeTrue();
+        using var response = await provider.GetAsync(ContentRequest.Get(uri));
+
+        response.StatusCode.Should().Be(200);
+        (await ReadTextAsync(response.Content)).Should().Be(SampleSite.IndexHtml);
+    }
+
+    [TestCase("icona.svg",     "image/svg+xml")]
+    [TestCase("font.woff2",    "font/woff2")]
+    [TestCase("dati.bin",      "application/octet-stream")]
+    [TestCase("senza-estensione", "application/octet-stream")]
+    public async Task Il_tipo_mime_dipende_dall_estensione(string fileName, string expectedMime)
+    {
+        var files = new Dictionary<string, byte[]> { [fileName] = SampleSite.Utf8("x") };
+        var pws   = await PackAsync(PwsSigningKey.None(), ("docs", "Docs", CreateSiteDirectory("docs", files)));
+        using var provider = await OpenProviderAsync(pws);
+
+        using var response = await provider.GetAsync(ContentRequest.Get($"pws://docs/{fileName}"));
+
+        response.StatusCode.Should().Be(200);
+        response.MimeType.Should().Be(expectedMime);
+    }
+
+    [TestCase("pws://a/../b/index.html")]
+    [TestCase("pws://a/%2e%2e/b/index.html")]
+    [TestCase("pws://a/sub/../../b/index.html")]
+    public async Task I_segmenti_punto_punto_non_escono_dal_sito_richiesto(string uri)
+    {
+        var pws = await PackTwoSitesAsync();
+        using var provider = await OpenProviderAsync(pws);
+
+        using var response = await provider.GetAsync(ContentRequest.Get(uri));
+
+        if (response.IsSuccess)
+            (await ReadTextAsync(response.Content)).Should().NotBe(SiteBIndex);
+    }
+
+    private const string SiteAIndex = "<h1>Sito A</h1>";
+    private const string SiteBIndex = "<h1>Sito B</h1>";
+
+    private Task<string> PackTwoSitesAsync() => PackAsync(
+        PwsSigningKey.None(),
+        ("a", "A", CreateSiteDirectory("a", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8(SiteAIndex) })),
+        ("b", "B", CreateSiteDirectory("b", new Dictionary<string, byte[]> { ["index.html"] = SampleSite.Utf8(SiteBIndex) })));
+
 }

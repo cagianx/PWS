@@ -6,6 +6,21 @@ sidebar_position: 1
 
 Prima di poter compilare e avviare PWS Browser è necessario soddisfare i seguenti requisiti.
 
+## Verifica automatica
+
+Lo script `scripts/check-dev-env.sh` controlla tutti i prerequisiti di questa pagina
+(.NET SDK 10, GTK4, WebKitGTK 6, Node.js, pnpm, submodule `my-docs`). Non installa nulla:
+per ogni mancanza stampa il comando da eseguire sulla distribuzione rilevata
+(Arch, Debian/Ubuntu, Fedora). Termina con codice 1 se manca qualcosa.
+
+```bash
+./scripts/check-dev-env.sh
+```
+
+Le librerie native sono cercate nel cache del linker dinamico (`ldconfig -p`), perché
+i binding GirCore le caricano a runtime: la build compila anche senza WebKitGTK 6,
+ma l'app va in crash quando crea la `WebView`.
+
 ## .NET SDK
 
 PWS richiede **.NET 10** o superiore.

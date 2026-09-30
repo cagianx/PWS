@@ -128,6 +128,9 @@ PWS_MAUI/
 git clone --recurse-submodules https://github.com/cagianx/PWS.git
 # su un clone esistente: git submodule update --init
 
+# Verifica dei prerequisiti: stampa il comando per installare ciò che manca
+./scripts/check-dev-env.sh
+
 # Prerequisiti di sistema (Debian/Ubuntu)
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 
@@ -239,4 +242,3 @@ La documentazione completa è in [`docs/`](./docs):
   oppure `pnpm openspec`), poi l'implementazione
 - C#: `nullable enable`, `implicit usings`, classi `sealed` di default
 - `MauiXaml Include` (non `Update`) quando `EnableDefaultXamlItems=false`
-

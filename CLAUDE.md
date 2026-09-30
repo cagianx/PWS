@@ -271,6 +271,11 @@ refactor(core): estrae interfaccia INavigationHistory
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.12 | Logging in PWS.Core |
 
 ### Prerequisiti di sistema (Linux)
+
+Verifica: `./scripts/check-dev-env.sh` (stampa il comando per installare ciò che manca).
+Se manca una dipendenza di sistema, non installarla: indicare all'utente il comando
+e lasciare che la installi lui.
+
 ```bash
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev   # Debian/Ubuntu
 sudo dnf install gtk4-devel webkitgtk6.0-devel        # Fedora

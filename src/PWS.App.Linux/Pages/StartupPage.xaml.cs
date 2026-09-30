@@ -78,13 +78,17 @@ public partial class StartupPage : ContentPage
             // 4. Piccola pausa per mostrare lo stato, poi naviga al browser
             await Task.Delay(600);
             _logger.LogDebug("StartupPage.OnOpenFileClicked: apro BrowserPage.");
-            await OpenBrowserAsync(reader, site.SiteId, errorService);
+
+            // Il backend GTK non installa un SynchronizationContext: dopo gli await di I/O
+            // il codice prosegue su un thread del pool. GTK non è thread-safe, quindi
+            // navigazione e widget vanno toccati solo dal main thread.
+            await Dispatcher.DispatchAsync(() => OpenBrowserAsync(reader, site.SiteId, errorService));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "StartupPage.OnOpenFileClicked: errore durante apertura/verifica .pws.");
             SetStatus($"Errore: {ex.Message}", Colors.Red);
-            await errorService.ShowAsync(ex, "Apertura file .pws");
+            await Dispatcher.DispatchAsync(() => errorService.ShowAsync(ex, "Apertura file .pws"));
         }
     }
 
@@ -99,7 +103,9 @@ public partial class StartupPage : ContentPage
             var pwsFileService = services.GetRequiredService<PwsFileService>();
             var logFactory    = services.GetRequiredService<ILoggerFactory>();
 
-            _logger.LogDebug("StartupPage.OpenBrowserAsync: creo PwsContentProvider per siteId={SiteId}.", defaultSiteId);
+            _logger.LogDebug(
+                "StartupPage.OpenBrowserAsync: creo PwsContentProvider per siteId={SiteId} (thread {Thread}, dispatch richiesto={Required}).",
+                defaultSiteId, Environment.CurrentManagedThreadId, Dispatcher.IsDispatchRequired);
 
             var provider = new PwsContentProvider(
                 reader,
@@ -132,6 +138,12 @@ public partial class StartupPage : ContentPage
 
     private void SetStatus(string message, Color color)
     {
+        if (Dispatcher.IsDispatchRequired)
+        {
+            Dispatcher.Dispatch(() => SetStatus(message, color));
+            return;
+        }
+
         StatusLabel.Text      = message;
         StatusLabel.TextColor = color;
         StatusLabel.IsVisible = true;

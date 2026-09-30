@@ -1,7 +1,11 @@
 # Rende docs/ un progetto pnpm indipendente, con il proprio pnpm-lock.yaml:
 # senza questo file pnpm 11 risale al pnpm-workspace.yaml della radice.
 
-# Gli script postinstall di core-js stampano solo un messaggio: non servono.
+# Script postinstall non necessari:
+# - core-js e core-js-pure stampano solo un messaggio;
+# - @swc/core (usato da @docusaurus/faster) verifica il binario nativo, che arriva
+#   già con le dipendenze opzionali @swc/core-<piattaforma>.
 allowBuilds:
+  '@swc/core': false
   core-js: false
   core-js-pure: false

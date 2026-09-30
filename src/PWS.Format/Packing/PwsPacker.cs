@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using PWS.Format.Crypto;
 using PWS.Format.Manifest;
@@ -29,6 +30,9 @@ public sealed class PwsPacker
         string         outputPath,
         CancellationToken ct = default)
     {
+        // Prima di creare il file: opzioni non valide non devono lasciare un archivio vuoto.
+        ValidateOptions(options);
+
         await using var fs = new FileStream(
             outputPath, FileMode.Create, FileAccess.Write, FileShare.None,
             bufferSize: 65536, useAsync: true);
@@ -41,8 +45,7 @@ public sealed class PwsPacker
         Stream         output,
         CancellationToken ct = default)
     {
-        if (options.Sites.Count == 0)
-            throw new ArgumentException("At least one site must be specified.", nameof(options));
+        ValidateOptions(options);
 
         _logger?.LogInformation("Packing {SiteCount} site(s) with algorithm {Algorithm}.",
             options.Sites.Count, options.SigningKey.Algorithm);
@@ -85,6 +88,34 @@ public sealed class PwsPacker
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Site ids become the host of <c>pws://{id}/</c> URIs, compared case-insensitively:
+    /// they must be DNS labels (ASCII letters, digits, inner hyphens, max 63 chars) and unique.
+    /// </summary>
+    private static readonly Regex SiteIdPattern =
+        new("^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$", RegexOptions.CultureInvariant);
+
+    private static void ValidateOptions(PwsPackOptions options)
+    {
+        if (options.Sites.Count == 0)
+            throw new ArgumentException("At least one site must be specified.", nameof(options));
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var site in options.Sites)
+        {
+            if (!SiteIdPattern.IsMatch(site.Id))
+                throw new ArgumentException(
+                    $"Site id '{site.Id}' is not valid: use ASCII letters, digits and inner hyphens " +
+                    "(max 63 characters), because it becomes the host of pws:// URIs.",
+                    nameof(options));
+
+            if (!seen.Add(site.Id))
+                throw new ArgumentException(
+                    $"Site id '{site.Id}' is used by more than one site (ids are case-insensitive).",
+                    nameof(options));
+        }
+    }
 
     private static async Task<SiteManifest> PackSiteAsync(
         ZipArchive     zip,

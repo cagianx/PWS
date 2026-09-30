@@ -94,6 +94,18 @@ await packer.PackAsync(
 
 Ogni sito viene scritto in `sites/{id}/` nel ZIP e ottiene il proprio JWT firmato.
 
+### Regole sugli id dei siti
+
+L'id diventa l'host degli URI `pws://{id}/`, che si confronta senza distinguere le maiuscole.
+Prima di scrivere qualsiasi byte, `PwsPacker` rifiuta con `ArgumentException`:
+
+- un elenco di siti vuoto;
+- un id che non è un'etichetta DNS: ammessi solo lettere ASCII, cifre e trattini non iniziali
+  né finali, massimo 63 caratteri (`docs`, `api-v2`; non `mio sito`, `docs_1`, `città`);
+- due siti con lo stesso id, anche se differiscono solo per le maiuscole (`docs` e `Docs`).
+
+Con l'overload che scrive su file, in questi casi il file non viene creato.
+
 ## File espliciti (senza cartella)
 
 ```csharp

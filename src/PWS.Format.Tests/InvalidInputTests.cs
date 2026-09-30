@@ -8,7 +8,8 @@ using Xunit;
 namespace PWS.Format.Tests;
 
 /// <summary>
-/// Inputs that must be rejected: malformed archives on open.
+/// Inputs that must be rejected: malformed archives on open, invalid site
+/// definitions on pack. No archive is opened or produced from them.
 /// </summary>
 public sealed class InvalidInputTests : IDisposable
 {
@@ -47,6 +48,75 @@ public sealed class InvalidInputTests : IDisposable
         var tampered = RewriteManifest(packed, manifest => manifest["sites"]![0]!["token"] = "");
 
         await Assert.ThrowsAsync<InvalidDataException>(() => PwsReader.OpenAsync(tampered));
+    }
+
+    // ── Packer ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Pack_NoSites_ThrowsArgument_AndCreatesNoFile()
+    {
+        var output = Path.Combine(_workDir, "empty.pws");
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => new PwsPacker().PackAsync(new PwsPackOptions { Sites = [] }, output));
+
+        Assert.False(File.Exists(output));
+    }
+
+    [Theory]
+    [InlineData("docs", "docs")]
+    [InlineData("docs", "Docs")]
+    public async Task Pack_DuplicateSiteIds_ThrowsArgument_AndCreatesNoFile(string first, string second)
+    {
+        var output = Path.Combine(_workDir, "dup.pws");
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => new PwsPacker().PackAsync(
+            new PwsPackOptions { Sites = [MakeSite(first), MakeSite(second)] }, output));
+
+        Assert.Contains(second, ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(output));
+    }
+
+    [Theory]
+    [InlineData("mio sito")]
+    [InlineData("")]
+    [InlineData("-docs")]
+    [InlineData("docs-")]
+    [InlineData("docs_1")]
+    [InlineData("docs/api")]
+    [InlineData("città")]
+    public async Task Pack_SiteIdNotValidAsHost_ThrowsArgument_AndCreatesNoFile(string id)
+    {
+        var output = Path.Combine(_workDir, "invalid.pws");
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => new PwsPacker().PackAsync(
+            new PwsPackOptions { Sites = [MakeSite(id)] }, output));
+
+        Assert.Contains($"'{id}'", ex.Message);
+        Assert.False(File.Exists(output));
+    }
+
+    [Theory]
+    [InlineData("docs")]
+    [InlineData("Docs-2")]
+    [InlineData("a")]
+    public async Task Pack_SiteIdValidAsHost_Succeeds(string id)
+    {
+        var output = Path.Combine(_workDir, "valid.pws");
+
+        await new PwsPacker().PackAsync(new PwsPackOptions { Sites = [MakeSite(id)] }, output);
+
+        using var reader = await PwsReader.OpenAsync(output);
+        Assert.Equal(id, reader.Sites.Single().SiteId);
+    }
+
+    [Fact]
+    public async Task Pack_SiteIdLongerThan63Chars_ThrowsArgument()
+    {
+        var id = new string('a', 64);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => new PwsPacker().PackAsync(
+            new PwsPackOptions { Sites = [MakeSite(id)] }, new MemoryStream()));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

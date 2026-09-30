@@ -14,10 +14,10 @@
 
 ## 3. Casi di errore di PWS.Format
 
-- [ ] 3.1 Aggiungere a `PWS.Format.Tests` i test del reader: `manifest.json` non JSON, `manifest.json` con `null`, sito con token vuoto. Tutti devono fallire con `InvalidDataException`. Verifica: `dotnet test src/PWS.Format.Tests`; se `JsonException` esce non convertita, correggere `PwsReader` (decisione 6) e fare un commit `fix(format): ...` con i test.
-- [ ] 3.2 Aggiungere i test del packer: nessun sito, id duplicati `docs` e `Docs`, id `mio sito`. Tutti devono fallire con `ArgumentException` senza scrivere l'archivio. Verifica: suite verde dopo l'aggiunta della validazione in `PwsPacker` (decisione 6); commit `fix(format): reject duplicate or invalid site ids when packing` con i test.
-- [ ] 3.3 Aggiungere a `ValidateCommandTests` un archivio con manifest malformato che `pwstool validate` rifiuta con codice diverso da 0, così il fix di 3.1 è verificato anche dalla CLI. Verifica: suite `PWS.IntegrationTests` verde.
-- [ ] 3.4 Documentare in `docs/docs/cli/` (pagina di `pack`) le regole sugli id di sito e in `docs/docs/format/` il rifiuto dei manifest malformati. Verifica: `cd docs && pnpm build` → `[SUCCESS]`.
+- [x] 3.1 Aggiungere a `PWS.Format.Tests` i test del reader: `manifest.json` non JSON, `manifest.json` con `null`, sito con token vuoto. Tutti devono fallire con `InvalidDataException`. Verifica: `dotnet test src/PWS.Format.Tests`; se `JsonException` esce non convertita, correggere `PwsReader` (decisione 6) e fare un commit `fix(format): ...` con i test.
+- [x] 3.2 Aggiungere i test del packer: nessun sito, id duplicati `docs` e `Docs`, id `mio sito`. Tutti devono fallire con `ArgumentException` senza scrivere l'archivio. Verifica: suite verde dopo l'aggiunta della validazione in `PwsPacker` (decisione 6); commit `fix(format): reject duplicate or invalid site ids when packing` con i test.
+- [x] 3.3 Aggiungere a `ValidateCommandTests` un archivio con manifest malformato che `pwstool validate` rifiuta con codice diverso da 0, così il fix di 3.1 è verificato anche dalla CLI. Verifica: suite `PWS.IntegrationTests` verde.
+- [x] 3.4 Documentare in `docs/docs/cli/` (pagina di `pack`) le regole sugli id di sito e in `docs/docs/format/` il rifiuto dei manifest malformati. Verifica: `cd docs && pnpm build` → `[SUCCESS]`.
 
 ## 4. Riga di comando di pwstool
 

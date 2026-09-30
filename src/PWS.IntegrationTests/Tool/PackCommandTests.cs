@@ -183,4 +183,22 @@ public sealed class PackCommandTests : ArchiveTestBase
         exitCode.Should().Be(1);
         File.Exists(output).Should().BeFalse();
     }
+
+    [TestCase("mio sito")]
+    [TestCase("docs_1")]
+    [TestCase("città")]
+    public async Task Pack_con_id_non_valido_come_host_fallisce_senza_creare_l_archivio(string siteId)
+    {
+        var output = PathInWorkDir("sito.pws");
+
+        var exitCode = await PackAsync(new PackOptions
+        {
+            Source = CreateSiteDirectory("docs"),
+            Output = output,
+            SiteId = siteId,
+        });
+
+        exitCode.Should().Be(1);
+        File.Exists(output).Should().BeFalse();
+    }
 }

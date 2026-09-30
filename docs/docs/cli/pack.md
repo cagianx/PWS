@@ -25,7 +25,7 @@ pwstool pack <source> -o <output.pws> [opzioni]
 | Opzione | Breve | Obbligatorio | Default | Descrizione |
 |---------|:-----:|:------------:|:-------:|-------------|
 | `--output` | `-o` | ✓ | — | Percorso del file `.pws` di output. |
-| `--id` | `-i` | | `site` | Identificatore del sito (alfanumerico + trattini). |
+| `--id` | `-i` | | `site` | Identificatore del sito: lettere ASCII, cifre e trattini interni, massimo 63 caratteri. Diventa l'host degli URI `pws://<id>/`, quindi un id non valido fa fallire il comando senza creare l'archivio. |
 | `--title` | `-t` | | uguale a `--id` | Titolo leggibile del sito, incorporato nel JWT. |
 | `--entry` | `-e` | | `index.html` | Entry-point relativo alla radice del sito. |
 | `--sign` | `-s` | | `none` | Algoritmo di firma (vedi sotto). |
@@ -50,7 +50,7 @@ Ogni esecuzione di `--sign ecdsa` **genera una nuova coppia di chiavi**. Non è 
 | Codice | Significato |
 |:------:|-------------|
 | `0` | Archivio creato con successo. |
-| `1` | Errore: sorgente non trovata, algoritmo sconosciuto, errore di I/O, ecc. |
+| `1` | Errore: sorgente non trovata, id del sito non valido, algoritmo sconosciuto, errore di I/O, ecc. |
 
 ## Esempi
 

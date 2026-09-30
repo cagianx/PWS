@@ -1,0 +1,5 @@
+# Impostazioni pnpm (da pnpm 11 non si leggono più dal campo "pnpm" di package.json).
+# Dipendenze del tooling OpenSpec che devono eseguire i propri script di build.
+allowBuilds:
+  '@parcel/watcher': true
+  better-sqlite3: true

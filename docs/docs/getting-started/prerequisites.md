@@ -58,19 +58,24 @@ preconfigurare il runner oltre a `actions/setup-dotnet` e `actions/setup-node`.
 
 ## Node.js e pnpm (solo per la documentazione)
 
-La documentazione usa [Docusaurus](https://docusaurus.io) e richiede **Node.js ≥ 18** e **pnpm**.
+La documentazione usa [Docusaurus](https://docusaurus.io) e richiede **pnpm 11**, che a sua
+volta richiede **Node.js ≥ 22.13**. Sono le stesse versioni della CI.
 
 ```bash
 # Verifica versioni
-node --version    # ≥ 18
-pnpm --version    # qualsiasi versione recente
+node --version    # ≥ 22.13
+pnpm --version    # 11.x
 
 # Installazione pnpm (se non presente)
 npm install -g pnpm
 ```
 
+Da pnpm 11 le impostazioni non si leggono più dal campo `"pnpm"` di `package.json` ma da
+`pnpm-workspace.yaml`. Il repository ne ha due: quello alla radice (tooling OpenSpec) e
+`docs/pnpm-workspace.yaml`, che tiene `docs/` separato dal progetto della radice, ognuno
+con il proprio `pnpm-lock.yaml`.
+
 ## Editor consigliato
 
 - **JetBrains Rider** — supporto nativo C# + XAML
 - **VS Code** con estensioni C# Dev Kit e .NET MAUI
-

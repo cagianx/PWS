@@ -158,7 +158,7 @@ La pipeline esegue cinque job su `ubuntu-24.04`:
 
 2. **Build Docusaurus docs**
    - configura `pnpm` **prima** di `setup-node` (necessario per il cache provider)
-   - configura Node.js 20 + pnpm 9
+   - configura Node.js 22 + pnpm 11
    - esegue `pnpm install --frozen-lockfile`
    - esegue `pnpm build`
    - pubblica l'artifact scaricabile `docs-build`

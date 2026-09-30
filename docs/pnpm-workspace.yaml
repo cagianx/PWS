@@ -1,0 +1,7 @@
+# Rende docs/ un progetto pnpm indipendente, con il proprio pnpm-lock.yaml:
+# senza questo file pnpm 11 risale al pnpm-workspace.yaml della radice.
+
+# Gli script postinstall di core-js stampano solo un messaggio: non servono.
+allowBuilds:
+  core-js: false
+  core-js-pure: false

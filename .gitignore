@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 *.iml
 
+
+# ── Tooling Node alla radice (OpenSpec) ────────────────────────────
+/node_modules/

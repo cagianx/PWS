@@ -11,15 +11,89 @@ tutto passa attraverso l'astrazione `IContentProvider`.
 
 ---
 
+## Knowledge base
+
+Questo progetto segue le convenzioni in `my-docs/`, submodule git pinnato a un tag
+(clonare con `git clone --recurse-submodules`, oppure `git submodule update --init`).
+Riferimenti principali:
+
+- Principi generali → `my-docs/docs/regole/principi.md`
+- Architettura solution → `my-docs/docs/regole/architettura.md`, `my-docs/docs/tecnologie/csharp/struttura-soluzione/`
+- Gestione errori → `my-docs/docs/regole/gestione-errori.md`
+- Logging → `my-docs/docs/regole/logging.md`
+- Dependency injection → `my-docs/docs/tecnologie/csharp/16-dependency-injection.md`
+- Async e cancellazione → `my-docs/docs/tecnologie/csharp/linguaggio/15-async.md`, `my-docs/docs/tecnologie/csharp/concorrenza/23-cancellation-token.md`
+- Test → `my-docs/docs/regole/testing.md`, `my-docs/docs/tecnologie/csharp/test-integrazione/`, `my-docs/docs/tecnologie/csharp/test-unitari/`
+- App desktop con server locale → `my-docs/docs/tecnologie/desktop/index.md`
+- Documentazione → `my-docs/docs/regole/documentazione.md`
+- Versionamento → `my-docs/docs/regole/versionamento.md`
+- Git e commit → `my-docs/docs/tecnologie/git/index.md`
+- Ambiente di sviluppo → `my-docs/docs/regole/ambiente-di-sviluppo.md`
+- Analisi tecnica con OpenSpec → `my-docs/docs/processi/analisi-tecnica/02-openspec.md`
+- Glossario → `my-docs/docs/glossario.md` (termini generali) e `docs/docs/glossario.md` (termini di dominio PWS)
+
+Per cercare altri concetti, partire da `my-docs/docs/indice-analitico.md`, non da un grep
+cieco sul submodule.
+
+Regole d'uso:
+
+- Usare i termini del glossario in nomi di classi, commit e artefatti OpenSpec. Un nuovo
+  termine di dominio PWS va aggiunto a `docs/docs/glossario.md`, non a MyDocs.
+- Quando si applica una regola di MyDocs, citarla nel corpo del commit
+  (es. `Vedi my-docs/docs/regole/testing.md.`).
+- Il bump di MyDocs è un commit dedicato:
+  `cd my-docs && git checkout vX.Y.Z && cd .. && git add my-docs && git commit -m "chore(my-docs): bump to vX.Y.Z"`.
+- Documentazione solo in Markdown e Mermaid: niente screenshot o PDF come fonte.
+
+### Skill disponibili
+
+- `/commit` → commit assistito dall'IA (`.claude/skills/commit/SKILL.md`, procedura in
+  `my-docs/docs/ia/skills/commit-ia.md`). Usarla quando l'utente chiede di committare.
+- `/opsx:*` → flusso OpenSpec (sezione seguente).
+
+---
+
+## OpenSpec: flusso per le modifiche
+
+Le modifiche non banali al repository (nuove funzionalità, cambi di comportamento,
+migrazioni, refactoring estesi) passano da una change [OpenSpec](https://github.com/Fission-AI/OpenSpec)
+prima di toccare il codice. Fanno eccezione le correzioni banali che l'utente chiede
+esplicitamente di applicare al volo (typo, un valore, un link, un bump di dipendenza).
+
+1. `/opsx:propose "<descrizione>"` → crea `openspec/changes/<nome>/` con `proposal.md`,
+   `design.md`, `tasks.md` e la delta spec in `specs/<capability>/spec.md`. Non tocca il codice.
+2. L'utente approva l'ambito della change.
+3. `/opsx:apply` → implementa i task della change approvata.
+4. `/opsx:archive` → archivia la change e aggiorna le spec in `openspec/specs/`.
+
+Altri comandi: `/opsx:explore` (esplorazione prima di proporre), `/opsx:update`
+(rivede una change), `/opsx:sync` (sincronizza una delta spec senza archiviare).
+Configurazione in `openspec/config.yaml` (schema `spec-driven`, artefatti in italiano).
+La CLI è una devDependency del `package.json` alla radice:
+
+```bash
+pnpm install          # alla radice del repo, installa la CLI OpenSpec
+pnpm openspec list    # change attive
+pnpm openspec:ui      # dashboard web delle change
+```
+
+---
+
 ## Struttura
 
 ```
-PWS_MAUI/
+PWS/
 ├── src/
-│   ├── PWS.Core/        ← libreria portable net10.0, ZERO dipendenze MAUI
-│   ├── PWS.Format/      ← libreria formato .pws net10.0, ZERO NuGet aggiuntivi
-│   └── PWS.App.Linux/   ← app MAUI GTK4 net10.0 (Linux-only)
-├── docs/                ← documentazione Docusaurus (TypeScript, pnpm)
+│   ├── PWS.Core/          ← libreria portable net10.0, ZERO dipendenze MAUI
+│   ├── PWS.Format/        ← libreria formato .pws net10.0, ZERO NuGet aggiuntivi
+│   ├── PWS.Format.Tests/  ← test xUnit di PWS.Format
+│   ├── PWS.Tool/          ← CLI pwstool (pack, validate)
+│   ├── CreateTestPws/     ← utility che crea il .pws della documentazione
+│   └── PWS.App.Linux/     ← app MAUI GTK4 net10.0 (Linux-only)
+├── docs/                  ← documentazione Docusaurus (TypeScript, pnpm)
+├── my-docs/               ← knowledge base (submodule pinnato)
+├── openspec/              ← change e spec OpenSpec
+├── .claude/               ← skill e comandi per Claude Code
 └── CLAUDE.md
 ```
 
@@ -168,8 +242,8 @@ refactor(core): estrae interfaccia INavigationHistory
 |---------|----------|-------|
 | `Platform.Maui.Linux.Gtk4` | 0.6.0 | Backend GTK4 per MAUI su Linux |
 | `Platform.Maui.Linux.Gtk4.Essentials` | 0.6.0 | MAUI Essentials per Linux |
-| `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.* | DI in PWS.Core |
-| `Microsoft.Extensions.Logging.Abstractions` | 10.0.* | Logging in PWS.Core |
+| `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.12 | DI in PWS.Core |
+| `Microsoft.Extensions.Logging.Abstractions` | 10.0.12 | Logging in PWS.Core |
 
 ### Prerequisiti di sistema (Linux)
 ```bash

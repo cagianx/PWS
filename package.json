@@ -1,0 +1,19 @@
+{
+  "name": "pws",
+  "private": true,
+  "description": "Tooling di sviluppo del repository PWS (OpenSpec). La documentazione Docusaurus ha il proprio package in docs/.",
+  "scripts": {
+    "openspec": "openspec",
+    "openspec:ui": "openspecui"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "^1.13.0",
+    "openspecui": "^12.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "@parcel/watcher"
+    ]
+  }
+}

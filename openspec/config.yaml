@@ -1,0 +1,36 @@
+schema: spec-driven
+
+context: |
+  Language: it
+  All artifacts must be written in it.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Progetto: PWS, browser .NET 10 / MAUI per Linux (GTK4) che non carica mai
+  contenuti dal filesystem: tutto passa da IContentProvider. Gli archivi .pws
+  (ZIP + manifest.json + token JWT + hash Merkle) sono letti da PWS.Format,
+  serviti da PWS.Core e mostrati da PWS.App.Linux; PWS.Tool e' la CLI.
+  Descrizione completa del progetto e delle convenzioni in CLAUDE.md.
+
+  Convenzioni: il progetto segue la knowledge base in my-docs/ (submodule
+  pinnato). Prima di proporre, cercare i concetti partendo da
+  my-docs/docs/indice-analitico.md e usare i termini del glossario
+  (my-docs/docs/glossario.md e docs/docs/glossario.md per i termini PWS).
+
+rules:
+  design:
+    - Citare la pagina di my-docs che motiva ogni decisione tecnica rilevante
+  tasks:
+    - Ogni caso d'uso introdotto o modificato ha almeno un task di test di integrazione (my-docs/docs/regole/testing.md)
+    - Includere un task per aggiornare la documentazione in docs/docs/ quando cambia un comportamento visibile
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

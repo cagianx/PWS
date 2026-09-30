@@ -21,7 +21,7 @@
 
 ## 4. Riga di comando di pwstool
 
-- [ ] 4.1 Aggiungere `Tool/CommandLineTests`, che lancia `dotnet PWS.Tool.dll` come processo (decisione 5): nessun argomento → aiuto e codice 1; verbo `unpack` → messaggio di verbo sconosciuto e codice 1; `pack` senza sorgente → codice diverso da 0 e nessun archivio creato. Verifica: suite verde. Commit `test(tool): cover the pwstool command line entry point`.
+- [x] 4.1 Aggiungere `Tool/CommandLineTests`, che lancia `dotnet PWS.Tool.dll` come processo (decisione 5): nessun argomento → aiuto e codice 1; verbo `unpack` → messaggio di verbo sconosciuto e codice 1; `pack` senza sorgente → codice diverso da 0 e nessun archivio creato. Verifica: suite verde. Commit `test(tool): cover the pwstool command line entry point`.
 
 ## 5. Strato non grafico dell'app
 

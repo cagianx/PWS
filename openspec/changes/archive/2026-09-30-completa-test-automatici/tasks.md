@@ -34,4 +34,4 @@
 ## 6. Verifica integrata
 
 - [x] 6.1 Eseguire la verifica pre-commit di `CLAUDE.md`: build dell'app con 0 errori, `dotnet test` verde su tutte e tre le suite, `pnpm build` riuscito. Verifica: output dei comandi.
-- [ ] 6.2 Push e controllo che la CI sia verde in tutti i job, compreso `test-app`. Verifica: esito della run.
+- [x] 6.2 Push e controllo che la CI sia verde in tutti i job, compreso `test-app`. Verifica: esito della run. Esito: run 36710855259 verde in tutti e sei i job.

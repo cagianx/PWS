@@ -3,7 +3,7 @@
 ## Panoramica
 
 **PWS** è un browser .NET MAUI che gira nativamente su **Linux/GTK4** tramite il pacchetto
-[`Platform.Maui.Linux.Gtk4`](https://github.com/Redth/Maui.Gtk) (v0.6.0).
+[`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4) (0.1.0-preview.12.26421.1).
 Il punto chiave del progetto è che la WebView **non carica mai file dal filesystem**:
 il contenuto (HTML, dati, ecc.) viene sempre fornito da un'astrazione chiamata
 `IContentProvider`, che può essere implementata in qualunque modo (in-memory, API REST,
@@ -55,7 +55,7 @@ PWS.slnx
   **non** sa nulla della UI.
 
 ### PWS.App.Linux
-- Progetto **separato** dedicato a Linux: `Platform.Maui.Linux.Gtk4` porta dipendenze
+- Progetto **separato** dedicato a Linux: `Microsoft.Maui.Platforms.Linux.Gtk4` porta dipendenze
   native GTK4 che non devono inquinare build su altri OS.
 - Per scegliere un archivio `.pws`, usare un servizio GTK nativo (`Gtk.FileDialog`) invece di
   `Microsoft.Maui.Storage.FilePicker`, che sul backend Linux/GTK può non essere implementato.
@@ -126,7 +126,7 @@ feat(providers): aggiunge SqliteContentProvider
 fix(navigation): corregge doppio push su GoBack
 feat!: ContentResponse.Content diventa required
 docs(providers): documenta ApiContentProvider
-chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
+chore(deps): aggiorna Microsoft.Maui.Platforms.Linux.Gtk4 a 0.1.0-preview.13
 ```
 
 ---
@@ -153,8 +153,7 @@ cd docs && pnpm build
 
 | Package | Versione | Scopo |
 |---------|----------|-------|
-| `Platform.Maui.Linux.Gtk4` | 0.6.0 | Backend GTK4 per MAUI su Linux |
-| `Platform.Maui.Linux.Gtk4.Essentials` | 0.6.0 | MAUI Essentials per Linux |
+| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-preview.12.26421.1 | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta) |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.* | DI in PWS.Core |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.* | Logging in PWS.Core |
 
@@ -179,7 +178,7 @@ sudo pacman -S webkitgtk-6.0
 - **Non** usare `Update` negli item `MauiXaml` del csproj quando
   `EnableDefaultXamlItems=false` — usare sempre `Include`.
 - Usare **`Dispatcher.Dispatch()`** (dalla pagina/view) per aggiornare la UI da thread diversi.
-  `MainThread.BeginInvokeOnMainThread` **non** è implementato da `Platform.Maui.Linux.Gtk4.Essentials`.
+  `MainThread.BeginInvokeOnMainThread` non è affidabile sul backend GTK4 e l'app non usa Essentials.
 - Docusaurus: TypeScript, tema `classic`.
 
 ---

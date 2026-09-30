@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Graphics;
-using Platform.Maui.Linux.Gtk4.Platform;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Platform;
 using PWS.App.Linux.Services;
 using PWS.Core.Hosting;
 using PWS.App.Linux.ViewModels;
@@ -18,7 +18,7 @@ namespace PWS.App.Linux.Pages;
 /// Il codice-behind è il solo punto in cui si tocca la WebView MAUI.
 /// </summary>
 /// <remarks>
-/// <para><b>Bug GTK4 resize (Platform.Maui.Linux.Gtk4 ≤ 0.6.0):</b></para>
+/// <para><b>Bug GTK4 resize (backend dotnet/maui-labs, presente dalla 0.6.0 di Redth ad oggi):</b></para>
 /// <para>
 /// <c>LayoutHandler.ConnectHandler</c> aggancia una lambda anonima a
 /// <c>GtkWindow.OnNotify</c> per gestire il resize, ma presenta due difetti:

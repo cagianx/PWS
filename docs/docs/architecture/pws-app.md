@@ -8,7 +8,8 @@ sidebar_position: 3
 ma delega tutta la logica a `PWS.Core` tramite interfacce.
 
 :::info Progetto separato
-Il progetto usa [`Platform.Maui.Linux.Gtk4`](https://github.com/Redth/Maui.Gtk) che porta dipendenze
+Il progetto usa [`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4),
+il backend GTK4 sperimentale di `dotnet/maui-labs` (versione preview fissata), che porta dipendenze
 native GTK4 specifiche per Linux. Per questo motivo è mantenuto come **progetto separato** rispetto
 a un'eventuale app MAUI multi-piattaforma, evitando che le dipendenze native inquinino la build su
 altri OS.
@@ -139,7 +140,8 @@ await Navigation.PushAsync(new BrowserPage());
 ```
 
 La `StartupPage` **resta nello stack**: non viene rimossa con `Navigation.RemovePage(...)`.
-Questo è un workaround per un bug di `Platform.Maui.Linux.Gtk4` v0.6.0: il `LayoutHandler`
+Questo è un workaround per un bug del backend GTK4, presente dalla 0.6.0 di Redth/Maui.Gtk
+fino all'attuale versione di `dotnet/maui-labs`: il `LayoutHandler`
 aggancia callback di resize alla `GtkWindow` senza de-registrarle correttamente, quindi
 distruggere una pagina può lasciare handler stantii che interferiscono con i resize successivi.
 Per questo motivo il flusso usa solo `PushAsync()` / `PopAsync()`.
@@ -295,8 +297,9 @@ private void WebView_Navigated(object? sender, WebNavigatedEventArgs e)
 
 **Resize GTK4 — stato attuale:**
 
-Il problema di resize non è nella `WebView` in sé ma nel backend `Platform.Maui.Linux.Gtk4`
-v0.6.0, in particolare in `LayoutHandler`:
+Il problema di resize non è nella `WebView` in sé ma nel backend GTK4 (verificato sia su
+`Platform.Maui.Linux.Gtk4` 0.6.0 sia su `Microsoft.Maui.Platforms.Linux.Gtk4`
+0.1.0-preview.12), in particolare in `LayoutHandler`:
 
 - il listener anonimo agganciato a `GtkWindow.OnNotify` non viene rimosso in `DisconnectHandler`;
 - durante `notify::default-width` / `notify::default-height` il backend usa

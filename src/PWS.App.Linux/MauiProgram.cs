@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Platform.Maui.Linux.Gtk4.Hosting;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Hosting;
 using PWS.App.Linux.Services;
 using PWS.App.Linux.ViewModels;
 using PWS.Core.Abstractions;

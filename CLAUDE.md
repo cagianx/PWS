@@ -5,7 +5,7 @@ Viene letto automaticamente da Claude all'inizio di ogni sessione.
 
 ## Progetto: PWS Browser
 
-**PWS** è un browser .NET MAUI nativo per **Linux/GTK4** (`Platform.Maui.Linux.Gtk4` v0.6.0).
+**PWS** è un browser .NET MAUI nativo per **Linux/GTK4** (`Microsoft.Maui.Platforms.Linux.Gtk4` 0.1.0-preview.12.26421.1, backend sperimentale di `dotnet/maui-labs`).
 La caratteristica chiave è che la WebView **non carica mai contenuti dal filesystem**:
 tutto passa attraverso l'astrazione `IContentProvider`.
 
@@ -199,7 +199,7 @@ feat(providers): aggiunge SqliteContentProvider
 fix(navigation): corregge doppio push su GoBack
 feat!: ContentResponse.Content diventa required
 docs(providers): documenta ApiContentProvider
-chore(deps): aggiorna Platform.Maui.Linux.Gtk4 a 0.7.0
+chore(deps): aggiorna Microsoft.Maui.Platforms.Linux.Gtk4 a 0.1.0-preview.13
 refactor(core): estrae interfaccia INavigationHistory
 ```
 
@@ -224,7 +224,7 @@ refactor(core): estrae interfaccia INavigationHistory
 - Classi `sealed` di default
 - `MauiXaml Include` (mai `Update`) quando `EnableDefaultXamlItems=false`
 - Usare **`Dispatcher.Dispatch()`** (dalla pagina/view) per aggiornare la UI da thread diversi.
-  `MainThread.BeginInvokeOnMainThread` **non** è implementato da `Platform.Maui.Linux.Gtk4.Essentials`.
+  `MainThread.BeginInvokeOnMainThread` non è affidabile sul backend GTK4 e l'app non usa Essentials.
 - Provider → implementano `IContentProvider` → registrati in `CompositeContentProvider` in `MauiProgram.cs`
 - Il ViewModel NON dipende da MAUI Controls (solo `ICommand`, `INotifyPropertyChanged`)
 - `BrowserPage.xaml.cs` è l'**unico** punto in cui si tocca la `WebView`
@@ -243,8 +243,7 @@ refactor(core): estrae interfaccia INavigationHistory
 
 | Package | Versione | Scopo |
 |---------|----------|-------|
-| `Platform.Maui.Linux.Gtk4` | 0.6.0 | Backend GTK4 per MAUI su Linux |
-| `Platform.Maui.Linux.Gtk4.Essentials` | 0.6.0 | MAUI Essentials per Linux |
+| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-preview.12.26421.1 | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta) |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.12 | DI in PWS.Core |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.12 | Logging in PWS.Core |
 

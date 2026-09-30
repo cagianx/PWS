@@ -110,7 +110,7 @@ public partial class StartupPage : ContentPage
             _logger.LogDebug("StartupPage.OpenBrowserAsync: provider e server loopback registrati (porta={Port}).",
                 pwsFileService.CurrentServer?.Port);
 
-            // Bug GTK4 resize (Platform.Maui.Linux.Gtk4 ≤ 0.6.0):
+            // Bug GTK4 resize (backend dotnet/maui-labs, presente dalla 0.6.0 di Redth ad oggi):
             // LayoutHandler.ConnectHandler aggancia una lambda anonima a
             // GtkWindow.OnNotify che non viene MAI de-registrata. Se la pagina
             // viene distrutta (RemovePage), il suo LayoutHandler ha VirtualView = null

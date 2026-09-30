@@ -25,9 +25,11 @@
   <!-- Package: backend GTK4 ufficiale per MAUI su Linux (dotnet/maui-labs).
        Sperimentale: versione preview fissata in modo esatto, ogni aggiornamento
        è un commit chore(deps) dedicato. Essentials non è referenziato perché
-       l'app non registra né usa servizi Essentials. -->
+       l'app non registra né usa servizi Essentials.
+       Branch di prova: 0.1.0-ci.821.1 è il pacchetto della PR dotnet/maui-labs#594,
+       servito dal feed locale packages/local (vedi NuGet.config). -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.12.26421.1" />
+    <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-ci.821.1" />
     <PackageReference Include="Serilog" Version="4.4.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />

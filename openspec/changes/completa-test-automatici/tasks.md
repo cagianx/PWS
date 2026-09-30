@@ -2,9 +2,9 @@
 
 ## 1. Provider di PWS.Core
 
-- [ ] 1.1 Aggiungere `Providers/InMemoryContentProviderTests` in `PWS.IntegrationTests`: rotte predefinite `home` e `about` (200, `text/html`, titolo), registrazione statica e dinamica, sostituzione di una rotta, `pws://HOME/`, 404 su rotta sconosciuta, `CanHandle` con schemi di default e personalizzati. Verifica: `dotnet test src/PWS.IntegrationTests` verde con i nuovi test.
-- [ ] 1.2 Aggiungere `Providers/CompositeContentProviderTests`: delega alla prima sorgente capace nell'ordine dato, `CanHandle` falso senza sorgenti capaci, `GetAsync` senza sorgenti capaci solleva `InvalidOperationException`. Verifica: suite verde.
-- [ ] 1.3 Commit `test(providers): cover in-memory and composite content providers`.
+- [x] 1.1 Aggiungere `Providers/InMemoryContentProviderTests` in `PWS.IntegrationTests`: rotte predefinite `home` e `about` (200, `text/html`, titolo), registrazione statica e dinamica, sostituzione di una rotta, `pws://HOME/`, 404 su rotta sconosciuta, `CanHandle` con schemi di default e personalizzati. Verifica: `dotnet test src/PWS.IntegrationTests` verde con i nuovi test.
+- [x] 1.2 Aggiungere `Providers/CompositeContentProviderTests`: delega alla prima sorgente capace nell'ordine dato, `CanHandle` falso senza sorgenti capaci, `GetAsync` senza sorgenti capaci solleva `InvalidOperationException`. Verifica: suite verde.
+- [x] 1.3 Commit `test(providers): cover in-memory and composite content providers`.
 
 ## 2. Robustezza dei percorsi dei siti
 

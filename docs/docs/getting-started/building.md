@@ -65,14 +65,15 @@ di ripristinare facilmente il prefisso GitHub Pages.
 
 ## Checklist pre-commit
 
-Prima di ogni commit verificare che **entrambi** i seguenti comandi abbiano esito positivo:
+Prima di ogni commit verificare che **tutti** i seguenti comandi abbiano esito positivo (dettagli sui test in [Test](testing.md)):
 
 ```bash
 # 1. C# — 0 errori su tutti i progetti della solution
 dotnet build PWS.slnx
 
-# 2. Test formato .pws
+# 2. Test formato .pws e test di integrazione
 dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj
+dotnet test src/PWS.IntegrationTests/PWS.IntegrationTests.csproj
 
 # 3. Docusaurus — [SUCCESS]
 cd docs && pnpm build
@@ -89,6 +90,7 @@ build-dotnet  → dotnet restore/build PWS.slnx su ubuntu-24.04
 build-docs    → pnpm install --frozen-lockfile && pnpm build
 package-docs-pws → dotnet run CreateTestPws su docs/build e genera docs.pws
 test-format   → dotnet test PWS.Format.Tests (incl. test runtime con docs/build)
+test-integration → dotnet test PWS.IntegrationTests (archivi, provider, server loopback, CLI)
 ```
 
 > Nota: nel workflow GitHub Actions `pnpm` viene configurato **prima** di `actions/setup-node`,
@@ -109,7 +111,8 @@ Alla fine del workflow puoi scaricare questi artifact dalla pagina della run:
 | `pws-app-linux-build` | output Release dell'app Linux e del tool `CreateTestPws` |
 | `docs-build` | sito Docusaurus statico (`docs/build/`) |
 | `docs-pws` | archivio `.pws` generato dalla documentazione |
-| `pws-format-test-results` | risultati test `.trx` |
+| `pws-format-test-results` | risultati test `.trx` di `PWS.Format.Tests` |
+| `pws-integration-test-results` | risultati test `.trx` di `PWS.IntegrationTests` |
 
 ## Struttura degli output
 

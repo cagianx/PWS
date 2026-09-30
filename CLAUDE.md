@@ -87,6 +87,7 @@ PWS/
 │   ├── PWS.Core/          ← libreria portable net10.0, ZERO dipendenze MAUI
 │   ├── PWS.Format/        ← libreria formato .pws net10.0, ZERO NuGet aggiuntivi
 │   ├── PWS.Format.Tests/  ← test xUnit di PWS.Format
+│   ├── PWS.IntegrationTests/ ← test di integrazione NUnit (Core, server loopback, CLI)
 │   ├── PWS.Tool/          ← CLI pwstool (pack, validate)
 │   ├── CreateTestPws/     ← utility che crea il .pws della documentazione
 │   └── PWS.App.Linux/     ← app MAUI GTK4 net10.0 (Linux-only)
@@ -147,6 +148,7 @@ cd docs && pnpm build
 ## Regola fondamentale — Prima di ogni commit
 
 1. ✅ `dotnet build src/PWS.App.Linux/PWS.App.Linux.csproj` → **0 errori**
+   e `dotnet test` su `PWS.Format.Tests` e `PWS.IntegrationTests` → **verdi**
 2. ✅ `cd docs && pnpm build` → **[SUCCESS]**
 3. ✅ Documentazione aggiornata con le modifiche apportate
 4. ✅ Messaggio di commit in formato **Conventional Commits**
@@ -260,5 +262,5 @@ sudo pacman -S webkitgtk-6.0                          # Arch/EndeavourOS/Manjaro
 - [ ] `ApiContentProvider` nel `CompositeContentProvider` di `MauiProgram.cs`
 - [ ] Gestire `http://` e `https://` via `ApiContentProvider` nella WebView
 - [ ] Barra di progresso durante il caricamento
-- [ ] Test unitari per `PWS.Core` (xUnit)
+- [x] Test di integrazione per `PWS.Core`, `LoopbackContentServer` e `pwstool` (NUnit)
 - [ ] Completare la documentazione in `/docs`

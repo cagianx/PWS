@@ -148,7 +148,7 @@ cd docs && pnpm install && pnpm build
 
 Il repository include una pipeline GitHub Actions in `.github/workflows/ci.yml`.
 
-La pipeline esegue quattro job su `ubuntu-24.04`:
+La pipeline esegue cinque job su `ubuntu-24.04`:
 
 1. **Build .NET projects**
    - installa `libgtk-4-dev` e `libwebkitgtk-6.0-dev`
@@ -173,6 +173,11 @@ La pipeline esegue quattro job su `ubuntu-24.04`:
    - esegue `dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj`
    - pubblica l'artifact scaricabile `pws-format-test-results`
 
+5. **Integration tests**
+   - esegue `dotnet test src/PWS.IntegrationTests/PWS.IntegrationTests.csproj`
+     (archivi su disco, provider, server loopback, CLI, senza dipendenze GTK)
+   - pubblica l'artifact scaricabile `pws-integration-test-results`
+
 In questo modo la CI verifica sia la compilazione dell'app Linux/GTK4 sia la build della documentazione
 e i test end-to-end del formato `.pws`.
 
@@ -183,7 +188,8 @@ Dalla pagina del workflow GitHub Actions è possibile scaricare:
 - `pws-app-linux-build` → output compilato dell'app Linux e del tool `CreateTestPws`
 - `docs-build` → sito Docusaurus statico generato in `docs/build/`
 - `docs-pws` → archivio `.pws` della documentazione
-- `pws-format-test-results` → risultati test in formato `.trx`
+- `pws-format-test-results` → risultati test di `PWS.Format.Tests` in formato `.trx`
+- `pws-integration-test-results` → risultati test di `PWS.IntegrationTests` in formato `.trx`
 
 
 ---
@@ -202,7 +208,8 @@ Dalla pagina del workflow GitHub Actions è possibile scaricare:
 | **`pws pack`** — CLI packer (cartella → `.pws`) | 🔲 |
 | Dialog apertura file `.pws` (GTK native chooser) | ✅ |
 | Barra di progresso caricamento | 🔲 |
-| Test unitari (`PWS.Core`, `PWS.Format`) | 🔲 |
+| Test `PWS.Format` (xUnit) | ✅ |
+| Test di integrazione (`PWS.Core`, server loopback, CLI) | ✅ |
 
 ---
 

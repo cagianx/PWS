@@ -79,7 +79,7 @@ in-memory da `PwsFileContentProvider`.
 | Componente | Tecnologia |
 |-----------|-----------|
 | Framework UI | .NET MAUI 10 |
-| Backend grafico | Microsoft.Maui.Platforms.Linux.Gtk4 (dotnet/maui-labs) 0.1.0-preview.12.26421.1 |
+| Backend grafico | Microsoft.Maui.Platforms.Linux.Gtk4 (dotnet/maui-labs) 0.1.0-ci.821.1 (build CI della PR [dotnet/maui-labs#594](https://github.com/dotnet/maui-labs/pull/594), feed locale `packages/local`) |
 | WebView | WebKitGTK (via GTK4) |
 | Target | Linux nativo (net10.0) |
 | Documentazione | Docusaurus 3, TypeScript, pnpm |

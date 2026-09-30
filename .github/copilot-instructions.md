@@ -3,7 +3,7 @@
 ## Panoramica
 
 **PWS** è un browser .NET MAUI che gira nativamente su **Linux/GTK4** tramite il pacchetto
-[`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4) (0.1.0-preview.12.26421.1).
+[`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4) (0.1.0-ci.821.1, build CI della PR dotnet/maui-labs#594 in `packages/local`).
 Il punto chiave del progetto è che la WebView **non carica mai file dal filesystem**:
 il contenuto (HTML, dati, ecc.) viene sempre fornito da un'astrazione chiamata
 `IContentProvider`, che può essere implementata in qualunque modo (in-memory, API REST,
@@ -153,7 +153,7 @@ cd docs && pnpm build
 
 | Package | Versione | Scopo |
 |---------|----------|-------|
-| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-preview.12.26421.1 | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta) |
+| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-ci.821.1 (PR #594, `packages/local`) | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta) |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.* | DI in PWS.Core |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.* | Logging in PWS.Core |
 

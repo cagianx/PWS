@@ -5,7 +5,7 @@ Viene letto automaticamente da Claude all'inizio di ogni sessione.
 
 ## Progetto: PWS Browser
 
-**PWS** è un browser .NET MAUI nativo per **Linux/GTK4** (`Microsoft.Maui.Platforms.Linux.Gtk4` 0.1.0-preview.12.26421.1, backend sperimentale di `dotnet/maui-labs`).
+**PWS** è un browser .NET MAUI nativo per **Linux/GTK4** (`Microsoft.Maui.Platforms.Linux.Gtk4` 0.1.0-ci.821.1 dalla CI della PR dotnet/maui-labs#594, backend sperimentale di `dotnet/maui-labs`).
 La caratteristica chiave è che la WebView **non carica mai contenuti dal filesystem**:
 tutto passa attraverso l'astrazione `IContentProvider`.
 
@@ -267,7 +267,7 @@ refactor(core): estrae interfaccia INavigationHistory
 
 | Package | Versione | Scopo |
 |---------|----------|-------|
-| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-preview.12.26421.1 | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta) |
+| `Microsoft.Maui.Platforms.Linux.Gtk4` | 0.1.0-ci.821.1 | Backend GTK4 per MAUI su Linux (dotnet/maui-labs, sperimentale: versione esatta). Build CI della PR #594 servita da `packages/local` via `NuGet.config`: da sostituire con la prima preview su nuget.org che la include |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.12 | DI in PWS.Core |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.12 | Logging in PWS.Core |
 

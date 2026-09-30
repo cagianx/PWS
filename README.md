@@ -85,7 +85,7 @@ Il `manifest.json` descrive il sito e indica la risorsa di ingresso:
 | Componente | Tecnologia |
 |-----------|-----------|
 | Framework | .NET MAUI 10 — target `net10.0` |
-| Backend UI | [`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4) 0.1.0-preview.12.26421.1 |
+| Backend UI | [`Microsoft.Maui.Platforms.Linux.Gtk4`](https://github.com/dotnet/maui-labs/tree/main/platforms/Linux.Gtk4) 0.1.0-ci.821.1 (build CI della PR [dotnet/maui-labs#594](https://github.com/dotnet/maui-labs/pull/594), feed locale `packages/local`) |
 | WebView | WebKitGTK (via GTK4) |
 | OS target | Linux nativo |
 | Docs | Docusaurus 3 · TypeScript · pnpm |

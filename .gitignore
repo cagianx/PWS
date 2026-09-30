@@ -8,6 +8,8 @@ obj/
 
 # NuGet
 *.nupkg
+# Feed NuGet locale del repository (vedi NuGet.config): i pacchetti vanno versionati.
+!packages/local/*.nupkg
 *.snupkg
 
 # Output di pubblicazione

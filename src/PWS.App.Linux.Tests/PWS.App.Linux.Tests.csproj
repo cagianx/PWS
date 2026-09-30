@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PWS.App.Linux.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!--
+      Test dello strato dell'app che non tocca GTK: ViewModel e servizi.
+      Referenzia l'app (e quindi MAUI e GirCore), ma nessun test carica
+      librerie native: gira senza display e senza GTK/WebKitGTK installati.
+      Vedi my-docs/docs/regole/testing.md.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="NUnit"                  Version="4.6.1" />
+    <PackageReference Include="NUnit3TestAdapter"      Version="6.3.0" />
+    <PackageReference Include="FluentAssertions"       Version="8.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PWS.App.Linux/PWS.App.Linux.csproj" />
+    <ProjectReference Include="../PWS.Format/PWS.Format.csproj" />
+  </ItemGroup>
+
+  <!-- Basi comuni dei test di integrazione: archivi .pws reali in directory temporanee. -->
+  <ItemGroup>
+    <Compile Include="../PWS.IntegrationTests/Common/ArchiveTestBase.cs" Link="Common/ArchiveTestBase.cs" />
+    <Compile Include="../PWS.IntegrationTests/Common/SampleSite.cs"      Link="Common/SampleSite.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+
+</Project>

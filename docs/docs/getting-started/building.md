@@ -74,6 +74,7 @@ dotnet build PWS.slnx
 # 2. Test formato .pws e test di integrazione
 dotnet test src/PWS.Format.Tests/PWS.Format.Tests.csproj
 dotnet test src/PWS.IntegrationTests/PWS.IntegrationTests.csproj
+dotnet test src/PWS.App.Linux.Tests/PWS.App.Linux.Tests.csproj
 
 # 3. Docusaurus — [SUCCESS]
 cd docs && pnpm build
@@ -91,6 +92,7 @@ build-docs    → pnpm install --frozen-lockfile && pnpm build
 package-docs-pws → dotnet run CreateTestPws su docs/build e genera docs.pws
 test-format   → dotnet test PWS.Format.Tests (incl. test runtime con docs/build)
 test-integration → dotnet test PWS.IntegrationTests (archivi, provider, server loopback, CLI)
+test-app      → dotnet test PWS.App.Linux.Tests (ViewModel e servizi dell'app, senza GTK)
 ```
 
 > Nota: nel workflow GitHub Actions `pnpm` viene configurato **prima** di `actions/setup-node`,

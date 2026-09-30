@@ -151,7 +151,7 @@ cd docs && pnpm install && pnpm build
 
 Il repository include una pipeline GitHub Actions in `.github/workflows/ci.yml`.
 
-La pipeline esegue cinque job su `ubuntu-24.04`:
+La pipeline esegue sei job su `ubuntu-24.04`:
 
 1. **Build .NET projects**
    - installa `libgtk-4-dev` e `libwebkitgtk-6.0-dev`
@@ -180,6 +180,11 @@ La pipeline esegue cinque job su `ubuntu-24.04`:
    - esegue `dotnet test src/PWS.IntegrationTests/PWS.IntegrationTests.csproj`
      (archivi su disco, provider, server loopback, CLI, senza dipendenze GTK)
    - pubblica l'artifact scaricabile `pws-integration-test-results`
+
+6. **Test PWS.App.Linux (senza display)**
+   - esegue `dotnet test src/PWS.App.Linux.Tests/PWS.App.Linux.Tests.csproj`
+     (ViewModel e servizi dell'app, senza installare GTK né WebKitGTK)
+   - pubblica l'artifact scaricabile `pws-app-test-results`
 
 In questo modo la CI verifica sia la compilazione dell'app Linux/GTK4 sia la build della documentazione
 e i test end-to-end del formato `.pws`.

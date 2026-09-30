@@ -207,3 +207,38 @@ jobs:
           name: pws-integration-test-results
           path: src/PWS.IntegrationTests/TestResults/**/*.trx
           if-no-files-found: error
+
+  test-app:
+    name: Test PWS.App.Linux (senza display)
+    runs-on: ubuntu-24.04
+
+    # Nessuna installazione di GTK4 o WebKitGTK: i test coprono solo ViewModel e servizi.
+    # Se un test caricasse librerie native fallirebbe qui, ed è voluto.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'PWS.slnx') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Run app tests
+        run: dotnet test src/PWS.App.Linux.Tests/PWS.App.Linux.Tests.csproj --configuration $BUILD_CONFIGURATION --logger "console;verbosity=normal" --logger "trx;LogFileName=pws-app-tests.trx"
+
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pws-app-test-results
+          path: src/PWS.App.Linux.Tests/TestResults/**/*.trx
+          if-no-files-found: error

@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using PWS.App.Linux.Services;
+using PWS.Core.Hosting;
 
 namespace PWS.App.Linux.ViewModels;
 

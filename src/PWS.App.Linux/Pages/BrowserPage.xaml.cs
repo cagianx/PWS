@@ -6,6 +6,7 @@ using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Graphics;
 using Platform.Maui.Linux.Gtk4.Platform;
 using PWS.App.Linux.Services;
+using PWS.Core.Hosting;
 using PWS.App.Linux.ViewModels;
 
 namespace PWS.App.Linux.Pages;

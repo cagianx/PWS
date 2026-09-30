@@ -101,7 +101,8 @@ PWS/
 - `Abstractions/` → `IContentProvider`, `INavigationService`
 - `Models/`       → `ContentRequest`, `ContentResponse` (usa `Stream`, è `IDisposable`), `NavigationEntry`
 - `Navigation/`   → `NavigationHistory`, `NavigationService`
-- `Providers/`    → `InMemoryContentProvider` (pws://), `ApiContentProvider` (http/https/api://), `CompositeContentProvider`
+- `Hosting/`      → `LoopbackContentServer` (server HTTP su 127.0.0.1 dedicato a un sito)
+- `Providers/`    → `InMemoryContentProvider` (pws://), `ApiContentProvider` (http/https/api://), `CompositeContentProvider`, `PwsContentProvider`
 
 ### PWS.Format (nessuna dipendenza MAUI, zero NuGet extra)
 - `Manifest/`    → `PwsManifest`, `SiteManifest`

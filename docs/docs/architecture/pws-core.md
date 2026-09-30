@@ -27,13 +27,16 @@ PWS.Core/
 │   ├── ContentRequest.cs      ← richiesta al provider
 │   ├── ContentResponse.cs     ← risposta (Stream + metadata)
 │   └── NavigationEntry.cs     ← voce nella history
+├── Hosting/
+│   └── LoopbackContentServer.cs ← server HTTP su 127.0.0.1 dedicato a un sito
 ├── Navigation/
 │   ├── NavigationHistory.cs   ← stack back/forward
 │   └── NavigationService.cs   ← coordina provider + history
 └── Providers/
     ├── InMemoryContentProvider.cs
     ├── ApiContentProvider.cs
-    └── CompositeContentProvider.cs
+    ├── CompositeContentProvider.cs
+    └── PwsContentProvider.cs  ← file di un archivio .pws (pws://{siteId}/…)
 ```
 
 ## Modelli chiave

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using PWS.Core.Hosting;
 using PWS.Core.Providers;
 
 namespace PWS.App.Linux.Services;

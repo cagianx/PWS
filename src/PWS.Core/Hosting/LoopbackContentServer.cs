@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using PWS.Core.Models;
 using PWS.Core.Providers;
 
-namespace PWS.App.Linux.Services;
+namespace PWS.Core.Hosting;
 
 /// <summary>
 /// Espone il contenuto di un <see cref="PwsContentProvider"/> tramite un piccolo

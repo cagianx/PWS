@@ -28,8 +28,7 @@ PWS.App.Linux/
 ├── Services/
 │   ├── IPwsArchivePicker.cs    ← astrazione chooser archivio
 │   ├── GtkPwsArchivePicker.cs  ← Gtk.FileDialog nativo Linux
-│   ├── PwsFileService.cs       ← mantiene provider + LoopbackContentServer correnti
-│   └── LoopbackContentServer.cs← server HTTP su loopback dedicato per sito
+│   └── PwsFileService.cs       ← mantiene provider + LoopbackContentServer correnti
 └── ViewModels/
     ├── BaseViewModel.cs       ← INotifyPropertyChanged helper
     └── BrowserViewModel.cs    ← stato e comandi del browser
@@ -150,7 +149,9 @@ Il `PwsReader` resta aperto in memoria per tutta la sessione e i file vengono le
 ## Server HTTP Loopback per sito
 
 Ogni archivio `.pws` aperto ottiene un **server HTTP dedicato** (`LoopbackContentServer`)
-in ascolto su `http://127.0.0.1:{portaCasuale}/`.
+in ascolto su `http://127.0.0.1:{portaCasuale}/`. La classe vive in `PWS.Core`
+(namespace `PWS.Core.Hosting`), senza dipendenze MAUI, così è coperta dai test di integrazione
+insieme ai provider.
 
 ```text
 Apertura docs.pws

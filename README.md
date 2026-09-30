@@ -124,6 +124,10 @@ PWS_MAUI/
 ## Build
 
 ```bash
+# Clone, incluso il submodule my-docs (knowledge base del progetto)
+git clone --recurse-submodules https://github.com/cagianx/PWS.git
+# su un clone esistente: git submodule update --init
+
 # Prerequisiti di sistema (Debian/Ubuntu)
 sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
 
@@ -220,6 +224,12 @@ La documentazione completa è in [`docs/`](./docs):
 - Assistenti AI: possono preparare un riepilogo e proporre un messaggio di commit,
   ma **non devono eseguire automaticamente** `git commit`, `git push` o `git tag`
   senza conferma esplicita dell'utente
+- Knowledge base: le regole di sviluppo sono in [`my-docs/`](https://github.com/cagianx/my-docs),
+  submodule pinnato a un tag; `CLAUDE.md` indica le pagine rilevanti per questo progetto
+- Termini di dominio: [glossario](docs/docs/glossario.md)
+- Modifiche non banali: prima una change [OpenSpec](https://github.com/Fission-AI/OpenSpec)
+  in `openspec/changes/` (`pnpm install` alla radice, poi `/opsx:propose` da Claude Code
+  oppure `pnpm openspec`), poi l'implementazione
 - C#: `nullable enable`, `implicit usings`, classi `sealed` di default
 - `MauiXaml Include` (non `Update`) quando `EnableDefaultXamlItems=false`
 

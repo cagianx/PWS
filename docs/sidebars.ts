@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
         'cli/pack',
       ],
     },
+    'glossario',
   ],
 };
 

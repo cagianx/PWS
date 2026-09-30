@@ -5,6 +5,7 @@
     <Project Path="src/PWS.Core/PWS.Core.csproj" />
     <Project Path="src/PWS.Format/PWS.Format.csproj" />
     <Project Path="src/PWS.Format.Tests/PWS.Format.Tests.csproj" />
+    <Project Path="src/PWS.IntegrationTests/PWS.IntegrationTests.csproj" />
     <Project Path="src/PWS.Tool/PWS.Tool.csproj" />
   </Folder>
 </Solution>
